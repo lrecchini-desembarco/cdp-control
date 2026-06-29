@@ -35,6 +35,7 @@ type Status = "loading" | "ok" | "error";
 
 export default function AlertasView() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [silenciadas, setSilenciadas] = useState<Alerta[]>([]);
   const [resumen, setResumen] = useState<ResumenAlertas>(RESUMEN_VACIO);
   const [status, setStatus] = useState<Status>("loading");
   const [errMsg, setErrMsg] = useState("");
@@ -73,6 +74,7 @@ export default function AlertasView() {
       const j = await r.json();
       if (!j.ok) throw new Error(j.error ?? "No se pudieron calcular las alertas.");
       setAlertas(j.alertas as Alerta[]);
+      setSilenciadas((j.silenciadas as Alerta[]) ?? []);
       setResumen(j.resumen as ResumenAlertas);
       setStatus("ok");
     } catch (e) {
@@ -83,6 +85,19 @@ export default function AlertasView() {
   useEffect(() => {
     cargar();
   }, []);
+
+  async function silenciar(id: string) {
+    await fetch("/api/silencios", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, dias: 7 }),
+    });
+    cargar();
+  }
+  async function reactivar(id: string) {
+    await fetch(`/api/silencios?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    cargar();
+  }
 
   const visibles = useMemo(
     () =>
@@ -160,9 +175,34 @@ export default function AlertasView() {
       ) : (
         <div className="space-y-2.5">
           {visibles.map((a) => (
-            <AlertaCard key={a.id} a={a} />
+            <AlertaCard key={a.id} a={a} onSilenciar={() => silenciar(a.id)} />
           ))}
         </div>
+      )}
+
+      {/* Silenciadas */}
+      {silenciadas.length > 0 && (
+        <details className="rounded-card border border-line bg-surface">
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-ink">
+            Silenciadas ({silenciadas.length})
+            <span className="ml-2 text-2xs font-normal text-faint">
+              no cuentan ni notifican hasta que venzan o las reactives
+            </span>
+          </summary>
+          <div className="divide-y divide-line border-t border-line">
+            {silenciadas.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="flex-1 text-xs text-muted line-through">{a.titulo}</span>
+                <button
+                  onClick={() => reactivar(a.id)}
+                  className="text-2xs font-medium text-action hover:underline"
+                >
+                  Reactivar
+                </button>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       <ComoFunciona />
@@ -170,7 +210,7 @@ export default function AlertasView() {
   );
 }
 
-function AlertaCard({ a }: { a: Alerta }) {
+function AlertaCard({ a, onSilenciar }: { a: Alerta; onSilenciar: () => void }) {
   const sev = SEV[a.severidad];
   return (
     <Card className={`border-l-4 ${sev.rail} p-4`}>
@@ -204,9 +244,16 @@ function AlertaCard({ a }: { a: Alerta }) {
           </span>
         )}
         {a.fecha && <span className="text-2xs text-faint">· {a.fecha}</span>}
+        <button
+          onClick={onSilenciar}
+          className="ml-auto text-2xs font-medium text-faint hover:text-muted"
+          title="Posponer 7 días"
+        >
+          Silenciar 7d
+        </button>
         <Link
           href={a.accion.href}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-action/40 hover:text-action"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-action/40 hover:text-action"
         >
           {a.accion.label} →
         </Link>

@@ -1,17 +1,20 @@
-import { SUCURSALES, PRODUCTO_MAP, recentDates, unidadDe, nombreInsumo, brandDeInsumo } from "./catalogo";
+import { recentDates, unidadDe, nombreInsumo, brandDeInsumo } from "./catalogo";
+import { getMapeos } from "./mapeos-store";
 import { getSources } from "./sources";
+import type { MapeosData } from "./mapeos-store";
 import type { PedidoCdp, VentaSku, RangoQuery } from "./sources/types";
 import type { CruceComponente, CruceRow } from "./types";
-
-const sucPorCanonico = new Map(SUCURSALES.map((s) => [s.canonico, s]));
-const reglasPorSku = new Map(PRODUCTO_MAP.map((m) => [m.skuVenta, m]));
 
 /**
  * Combina pedidos (Raven) y ventas (Tango) en las filas del cruce. Función PURA:
  * misma entrada, misma salida. La venta equivalente se arma sumando, por insumo,
  * cada SKU vendido x su factor (el desglose que después explica el detalle).
+ * Usa los mapeos efectivos (defaults + lo guardado en la pantalla Mapeos).
  */
-export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[]): CruceRow[] {
+export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos: MapeosData): CruceRow[] {
+  const sucPorCanonico = new Map(mapeos.sucursales.map((s) => [s.canonico, s]));
+  const reglasPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
+
   // 1) Acumular componentes de venta por (fecha, sucursal, insumo)
   const comps = new Map<string, Map<string, CruceComponente>>();
   for (const v of ventas) {
@@ -82,5 +85,5 @@ export function rangoPorDefecto(): RangoQuery {
 export async function getCruce(q: RangoQuery = rangoPorDefecto()): Promise<CruceRow[]> {
   const { pedidos, ventas } = getSources();
   const [p, v] = await Promise.all([pedidos.getPedidos(q), ventas.getVentas(q)]);
-  return construirCruce(p, v);
+  return construirCruce(p, v, getMapeos());
 }

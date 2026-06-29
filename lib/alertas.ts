@@ -1,6 +1,9 @@
-import { SUCURSALES, PRODUCTO_MAP, PRODUCTS } from "./catalogo";
+import { PRODUCTS } from "./catalogo";
 import { getCruce } from "./cruce";
+import { getMapeos } from "./mapeos-store";
+import { idsSilenciados } from "./silencios";
 import { fmtInt, fmtPct } from "./brands";
+import type { MapeosData } from "./mapeos-store";
 import type { Alerta, CruceRow, ResumenAlertas, Severidad } from "./types";
 
 // Umbrales del control. Centralizados acá para que ajustar la sensibilidad
@@ -22,7 +25,7 @@ const desvio = (r: CruceRow) =>
  * para que sumar o ajustar una sea local. Es una función pura: mismas entradas,
  * mismas salidas (clave para testear y, más adelante, para deduplicar/silenciar).
  */
-export function detectarAlertas(cruce: CruceRow[]): Alerta[] {
+export function detectarAlertas(cruce: CruceRow[], mapeos: MapeosData): Alerta[] {
   const fechas = Array.from(new Set(cruce.map((r) => r.fecha))).sort().reverse();
   const ultima = fechas[0];
   const alertas: Alerta[] = [];
@@ -119,7 +122,7 @@ export function detectarAlertas(cruce: CruceRow[]): Alerta[] {
   // ── Regla 4 · Sucursal activa sin mapear ────────────────────────────────
   // Punto ciego: vende y pide, pero al no tener código canónico no entra al
   // cruce. Hoy esto pasa desapercibido hasta que estalla un faltante grande.
-  for (const s of SUCURSALES.filter((x) => x.activa && !x.canonico)) {
+  for (const s of mapeos.sucursales.filter((x) => x.activa && !x.canonico)) {
     alertas.push({
       id: `sucursal-sin-mapear:${s.ravenCode}`,
       tipo: "sucursal-sin-mapear",
@@ -137,7 +140,7 @@ export function detectarAlertas(cruce: CruceRow[]): Alerta[] {
   // El CDP lo despacha, pero ninguna regla dice qué producto vendido lo
   // consume -> sus pedidos no se pueden contrastar contra ventas.
   for (const p of PRODUCTS) {
-    if (!PRODUCTO_MAP.some((m) => m.codigoCdp === p.code)) {
+    if (!mapeos.productoMap.some((m) => m.codigoCdp === p.code)) {
       alertas.push({
         id: `insumo-sin-receta:${p.code}`,
         tipo: "insumo-sin-receta",
@@ -164,11 +167,18 @@ export function resumenAlertas(alertas: Alerta[]): ResumenAlertas {
 }
 
 /**
- * Orquestador: trae el cruce de las fuentes reales y corre la detección.
- * Se usa desde la API route y desde componentes de servidor.
+ * Orquestador: trae el cruce, corre la detección sobre los mapeos efectivos y
+ * aparta las alertas silenciadas (no cuentan ni notifican mientras estén vigentes).
  */
-export async function getAlertas(): Promise<{ alertas: Alerta[]; resumen: ResumenAlertas }> {
+export async function getAlertas(): Promise<{
+  alertas: Alerta[];
+  silenciadas: Alerta[];
+  resumen: ResumenAlertas;
+}> {
   const cruce = await getCruce();
-  const alertas = detectarAlertas(cruce);
-  return { alertas, resumen: resumenAlertas(alertas) };
+  const todas = detectarAlertas(cruce, getMapeos());
+  const silenciados = idsSilenciados();
+  const alertas = todas.filter((a) => !silenciados.has(a.id));
+  const silenciadas = todas.filter((a) => silenciados.has(a.id));
+  return { alertas, silenciadas, resumen: resumenAlertas(alertas) };
 }

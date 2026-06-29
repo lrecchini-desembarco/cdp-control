@@ -1,4 +1,5 @@
-import { SUCURSALES, PRODUCTO_MAP, recentDates, brandDeInsumo } from "../catalogo";
+import { recentDates, brandDeInsumo } from "../catalogo";
+import { getMapeos } from "../mapeos-store";
 import type { PedidoCdp, VentaSku, PedidosSource, VentasSource, RangoQuery } from "./types";
 
 // Fuente de DESARROLLO. No se usa en producción (DATA_SOURCE=live). Genera
@@ -17,17 +18,16 @@ function fechasEnRango(q: RangoQuery): string[] {
   return todas.filter((f) => f >= q.desde && f <= q.hasta).sort();
 }
 
-/** Sucursales que sí entran al cruce (activas y mapeadas). */
-const mapeadas = () => SUCURSALES.filter((s) => s.activa && s.canonico);
-
 export const mockVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
+    const { sucursales, productoMap } = getMapeos();
+    const mapeadas = sucursales.filter((s) => s.activa && s.canonico);
     const fechas = fechasEnRango(q);
     const out: VentaSku[] = [];
     const r = rng(7); // un solo stream continuo (evita sesgo de primer valor)
-    for (const s of mapeadas()) {
+    for (const s of mapeadas) {
       // Solo SKUs cuyo insumo es de la misma marca que la sucursal.
-      const reglas = PRODUCTO_MAP.filter((m) => brandDeInsumo(m.codigoCdp) === s.brand);
+      const reglas = productoMap.filter((m) => brandDeInsumo(m.codigoCdp) === s.brand);
       for (const m of reglas) {
         for (const fecha of fechas) {
           const unidades = 40 + Math.floor(r() * 320);
@@ -44,7 +44,7 @@ export const mockPedidosSource: PedidosSource = {
     // El pedido al CDP se deriva de la venta equivalente (ventas x factor) con
     // un desvío, para que el cruce muestre sub/sobre-pedidos realistas.
     const ventas = await mockVentasSource.getVentas(q);
-    const factorPorSku = new Map(PRODUCTO_MAP.map((m) => [m.skuVenta, m]));
+    const factorPorSku = new Map(getMapeos().productoMap.map((m) => [m.skuVenta, m]));
 
     // Venta equivalente por (fecha, sucursal, codigoCdp)
     const equiv = new Map<string, { fecha: string; suc: string; code: string; v: number }>();

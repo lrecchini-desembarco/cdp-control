@@ -1,18 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SUCURSALES, PRODUCTO_MAP } from "@/lib/catalogo";
 import { BRANDS, brandById } from "@/lib/brands";
 import type { ProductoMap, Sucursal } from "@/lib/types";
 import { Badge, Button, Card, inputClass } from "@/components/ui/primitives";
 
 export default function MapeosView() {
   const [tab, setTab] = useState<"suc" | "prod">("suc");
-  const [sucs, setSucs] = useState<Sucursal[]>(SUCURSALES);
-  const [prods, setProds] = useState<ProductoMap[]>(PRODUCTO_MAP);
+  const [sucs, setSucs] = useState<Sucursal[]>([]);
+  const [prods, setProds] = useState<ProductoMap[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
   const [resaltado, setResaltado] = useState<string | null>(null);
+
+  // Carga los mapeos efectivos (defaults + lo guardado) desde el servidor.
+  useEffect(() => {
+    fetch("/api/mapeos")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok) {
+          setSucs(j.sucursales);
+          setProds(j.productoMap);
+        }
+      })
+      .catch(() => setErrMsg("No se pudieron cargar los mapeos."));
+  }, []);
 
   // Deep-link desde el detalle del cruce: /mapeos?tab=prod&insumo=040022
   useEffect(() => {
@@ -31,11 +45,25 @@ export default function MapeosView() {
     setDirty(true);
     setSaved(false);
   }
-  function guardar() {
-    // En esta etapa persiste en memoria; el backend se conecta más adelante.
-    setDirty(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  async function guardar() {
+    setGuardando(true);
+    setErrMsg("");
+    try {
+      const r = await fetch("/api/mapeos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sucursales: sucs, productoMap: prods }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error ?? "No se pudo guardar.");
+      setDirty(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "No se pudo guardar.");
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
@@ -45,13 +73,15 @@ export default function MapeosView() {
           <h1 className="font-display text-xl font-semibold text-ink">Mapeos</h1>
           <p className="mt-0.5 text-sm text-muted">
             Equivalencias que hacen posible el cruce: sucursales de Raven y descomposición de productos.
+            Lo que guardás acá cambia el cruce y las alertas.
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {errMsg && <span className="text-2xs text-bad">{errMsg}</span>}
           {saved && <Badge tone="ok">Cambios guardados</Badge>}
-          {dirty && <span className="text-2xs text-warn">Cambios sin guardar</span>}
-          <Button onClick={guardar} disabled={!dirty}>
-            Guardar cambios
+          {dirty && !saved && <span className="text-2xs text-warn">Cambios sin guardar</span>}
+          <Button onClick={guardar} disabled={!dirty || guardando}>
+            {guardando ? "Guardando…" : "Guardar cambios"}
           </Button>
         </div>
       </div>

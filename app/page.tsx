@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { SUCURSALES, PRODUCTO_MAP } from "@/lib/catalogo";
 import { getCruce } from "@/lib/cruce";
+import { getMapeos } from "@/lib/mapeos-store";
 import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
 import { getControlCatalogo } from "@/lib/catalogo-control";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
@@ -23,7 +23,8 @@ export default async function Page() {
   } catch (e) {
     fuenteError = e instanceof Error ? e.message : "No se pudo leer la fuente de datos.";
   }
-  const alertas = resumenAlertas(detectarAlertas(cruce));
+  const mapeos = getMapeos();
+  const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
 
   let catalogo: ResumenCatalogo = CAT_VACIO;
   try {
@@ -42,7 +43,7 @@ export default async function Page() {
     const pct = r.pedidoCdp ? (r.pedidoCdp - r.ventaEquiv) / r.pedidoCdp : 0;
     return severidad(pct) !== "ok";
   }).length;
-  const activas = SUCURSALES.filter((s) => s.activa).length;
+  const activas = mapeos.sucursales.filter((s) => s.activa).length;
 
   return (
     <div className="space-y-6">
@@ -163,7 +164,7 @@ export default async function Page() {
         <Access
           href="/mapeos"
           title="Mapeos"
-          desc={`${activas} sucursales activas · ${PRODUCTO_MAP.length} reglas de producto.`}
+          desc={`${activas} sucursales activas · ${mapeos.productoMap.length} reglas de producto.`}
         />
         <Access
           href="/catalogo"

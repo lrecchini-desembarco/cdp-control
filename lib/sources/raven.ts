@@ -1,4 +1,5 @@
-import { PRODUCTS, sucursalPorRaven } from "../catalogo";
+import { PRODUCTS } from "../catalogo";
+import { getMapeos } from "../mapeos-store";
 import type { PedidoCdp, PedidosSource, RangoQuery } from "./types";
 
 // Fuente REAL de pedidos al CDP. Pega al mismo endpoint que el explorador de
@@ -38,6 +39,8 @@ export const ravenPedidosSource: PedidosSource = {
   async getPedidos(q: RangoQuery): Promise<PedidoCdp[]> {
     const fechas = rangoFechas(q.desde, q.hasta);
     const pedidos: PedidoCdp[] = [];
+    // Mapeo branch_code -> sucursal, con los mapeos efectivos (incluye lo guardado).
+    const sucPorRaven = new Map(getMapeos().sucursales.map((s) => [s.ravenCode, s]));
 
     // Una request por insumo y fecha. Se lanzan en paralelo y se toleran fallos
     // puntuales (un 404 = sin pedidos; un insumo nuevo no rompe el resto).
@@ -49,7 +52,7 @@ export const ravenPedidosSource: PedidosSource = {
             .then((resp) => {
               if (!resp?.branches) return;
               for (const b of resp.branches) {
-                const suc = sucursalPorRaven(b.branch_code);
+                const suc = sucPorRaven.get(b.branch_code);
                 if (!suc || !suc.canonico) continue; // sin mapear -> punto ciego (no entra)
                 pedidos.push({
                   fecha,

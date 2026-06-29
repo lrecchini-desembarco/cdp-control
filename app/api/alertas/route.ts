@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 // GET /api/alertas -> { ok, alertas, resumen }
 export async function GET() {
   try {
-    const { alertas, resumen } = await getAlertas();
-    return NextResponse.json({ ok: true, source: dataSourceName(), alertas, resumen });
+    const { alertas, silenciadas, resumen } = await getAlertas();
+    return NextResponse.json({ ok: true, source: dataSourceName(), alertas, silenciadas, resumen });
   } catch (e) {
     console.error("[alertas] error:", e);
     return NextResponse.json(
