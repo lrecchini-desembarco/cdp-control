@@ -1,5 +1,5 @@
 import { readStore, writeStore } from "./store";
-import { getMapeos } from "./mapeos-store";
+import seed from "./locales-seed.json";
 
 /**
  * Locales para Reseñas. Cada uno con su marca (para generar QR por marca) y su
@@ -23,10 +23,10 @@ export function marcaDeNombre(nombre: string): MarcaSlug {
   return "otros";
 }
 
+// Locales sembrados (los 109 reales del Excel Maps). Es el default cuando el
+// store está vacío — clave para que en prod (disco solo-lectura) igual se vean.
 function semilla(): Local[] {
-  return getMapeos()
-    .sucursales.filter((s) => s.activa)
-    .map((s) => ({ nombre: s.nombre, marca: marcaDeNombre(s.nombre) }));
+  return (seed as Local[]).map((l) => ({ ...l, marca: (l.marca as MarcaSlug) ?? marcaDeNombre(l.nombre) }));
 }
 
 function normalizar(raw: unknown): Local[] | null {
