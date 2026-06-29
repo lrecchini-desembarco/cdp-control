@@ -6,7 +6,7 @@ import type { CruceRow } from "@/lib/types";
 import { fmtInt, fmtPct, severidad } from "@/lib/brands";
 import { Badge, Button } from "@/components/ui/primitives";
 
-type Row = CruceRow & { dev: number; pct: number };
+type Row = CruceRow & { dev: number; pct: number; periodo?: string; dias?: number };
 
 export default function DetalleModal({
   row,
@@ -50,7 +50,8 @@ export default function DetalleModal({
           <p className="mt-1 text-xs text-muted">
             {row.producto}{" "}
             <span className="font-mono text-faint">{row.codigoCdp}</span> · {row.sucursal} ·{" "}
-            {row.fecha}
+            {row.periodo ?? row.fecha}
+            {row.dias && row.dias > 1 ? ` · ${row.dias} días` : ""}
           </p>
         </div>
         <button onClick={onClose} aria-label="Cerrar" className="text-lg leading-none text-faint hover:text-ink">
