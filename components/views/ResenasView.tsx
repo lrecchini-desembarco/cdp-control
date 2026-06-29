@@ -30,6 +30,7 @@ export default function ResenasView() {
   const [qr, setQr] = useState("");
   const [qrSel, setQrSel] = useState("general"); // "general" | "marca:<slug>" | "local:<nombre>"
   const [origin, setOrigin] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "", marca: "desembarco" });
   const [filtro, setFiltro] = useState("");
 
@@ -42,11 +43,12 @@ export default function ResenasView() {
   // Marcas con locales cargados (se actualiza solo al sumar locales de otra marca).
   const marcasPresentes = Array.from(new Set(locales.map((l) => l.marca || "otros")));
 
+  const base = (baseUrl || origin).replace(/\/+$/, "");
   const targetUrl = (sel: string) => {
-    if (!origin) return "";
-    if (sel.startsWith("marca:")) return `${origin}/review?m=${sel.slice(6)}`;
-    if (sel.startsWith("local:")) return `${origin}/review?l=${encodeURIComponent(sel.slice(6))}`;
-    return `${origin}/review`;
+    if (!base) return "";
+    if (sel.startsWith("marca:")) return `${base}/review?m=${sel.slice(6)}`;
+    if (sel.startsWith("local:")) return `${base}/review?l=${encodeURIComponent(sel.slice(6))}`;
+    return `${base}/review`;
   };
   const targetTitulo = (sel: string) => {
     if (sel.startsWith("marca:")) return MARCA_LABEL[sel.slice(6)] ?? "DS Group";
@@ -74,7 +76,9 @@ export default function ResenasView() {
   }
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    const o = window.location.origin;
+    setOrigin(o);
+    setBaseUrl(o);
     cargarLocales();
     cargarReviews();
   }, []);
@@ -172,7 +176,23 @@ export default function ResenasView() {
             <span className="text-2xs text-action">QR directo a {qrSel.slice(6)} (sin elegir local)</span>
           )}
         </div>
-        <p className="mt-2 break-all font-mono text-2xs text-faint">{reviewUrl}</p>
+        {/* URL pública del QR (en prod se completa sola con el dominio) */}
+        <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+          <label className="text-2xs font-medium uppercase tracking-wide text-faint">URL pública (para el QR)</label>
+          <input
+            className={inputClass}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="https://tudominio.com"
+          />
+          <p className="mt-1 break-all font-mono text-2xs text-faint">QR → {reviewUrl}</p>
+          {/localhost|127\.0\.0\.1/.test(base) && (
+            <p className="mt-1 text-2xs text-warn">
+              ⚠ El QR apunta a <b>localhost</b>: solo abre en esta compu. Para escanearlo desde el celular,
+              poné acá tu dominio público (o tu túnel) — o publicá el sitio (deploy).
+            </p>
+          )}
+        </div>
       </Card>
 
       {/* Póster imprimible (esto es lo único que sale en la impresión) */}
