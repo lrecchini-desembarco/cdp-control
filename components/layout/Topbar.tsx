@@ -5,15 +5,25 @@ import { useEffect, useState } from "react";
 
 const LABELS: Record<string, string> = {
   "": "Resumen",
+  alertas: "Alertas",
   cruce: "Cruce CDP vs ventas",
   raven: "Consultar Raven",
   mapeos: "Mapeos",
+  catalogo: "Control de catálogo",
+  resenas: "Reseñas",
+  usuarios: "Usuarios",
+  guia: "¿Qué puedo hacer?",
 };
 
-export default function Topbar() {
+export default function Topbar({ email, rolLabel }: { email: string; rolLabel: string }) {
   const path = usePathname();
   const seg = path.split("/").filter(Boolean)[0] ?? "";
   const [status, setStatus] = useState<"checking" | "online" | "offline">("checking");
+
+  async function salir() {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    window.location.href = "/login";
+  }
 
   // Visibilidad del estado del sistema (Nielsen #1): ping real a Raven vía proxy
   useEffect(() => {
@@ -47,6 +57,13 @@ export default function Topbar() {
           <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
           {txt}
         </span>
+        <span className="h-4 w-px bg-line" />
+        <span className="text-faint">
+          {email} · <span className="font-medium text-muted">{rolLabel}</span>
+        </span>
+        <button onClick={salir} className="font-medium text-muted hover:text-ink">
+          Salir
+        </button>
       </div>
     </header>
   );

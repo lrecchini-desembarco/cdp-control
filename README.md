@@ -14,9 +14,23 @@ npm run dev                  # http://localhost:3000
 
 Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 
+## Acceso y roles
+
+Login por **email + clave genérica** (`APP_PASSWORD`, default `cdp2026`). El admin da
+de alta emails y su rol en **`/usuarios`**; el rol define qué pantallas ve cada uno:
+
+- **Administrador** — todo + gestión de usuarios.
+- **Operaciones** — todo el control (cruce, alertas, catálogo, mapeos, Raven, reseñas).
+- **Local** — solo Reseñas.
+
+El menú se filtra por rol y las rutas no permitidas redirigen. La sesión es una cookie;
+el rol se deriva del store (no se puede escalar tocando la cookie).
+
 ## Pantallas
 
 - **¿Qué puedo hacer?** (`/guia`) — guía de orientación: qué se puede hacer desde la app y cómo, paso a paso, con accesos directos.
+- **Reseñas** (`/resenas`) — elegí un local, calificá el QA (1–5 por criterio) e imprimí la planilla de visita.
+- **Usuarios** (`/usuarios`, solo admin) — alta/baja de emails y su rol.
 - **Resumen** (`/`) — estado del último día: pedido al CDP, venta equivalente, desvío neto y líneas a revisar.
   Arriba, una banda con el estado de las alertas.
 - **Alertas** (`/alertas`) — centro de monitoreo: detecta quiebres, sobre-pedidos, desvíos recurrentes y

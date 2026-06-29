@@ -31,6 +31,15 @@ html, body {
   * { animation: none !important; transition: none !important; }
 }
 
+/* Impresión: solo la planilla de reseña (#print-area); oculta menú, topbar y controles */
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print { display: none !important; }
+  @page { margin: 14mm; }
+}
+
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 .skeleton {
   position: relative; overflow: hidden; background: #ECEAE3;

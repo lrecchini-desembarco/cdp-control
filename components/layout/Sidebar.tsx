@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { puedeVer } from "@/lib/roles";
+import type { Rol } from "@/lib/roles";
 
 const NAV = [
   { href: "/", label: "Resumen", icon: "◰" },
@@ -11,14 +13,19 @@ const NAV = [
   { href: "/raven", label: "Consultar Raven", icon: "↧" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
   { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
+  { href: "/resenas", label: "Reseñas", icon: "★" },
+  { href: "/usuarios", label: "Usuarios", icon: "◑" },
   { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ rol }: { rol: Rol }) {
   const path = usePathname();
-  // Contador de alertas urgentes (críticas + altas) para el badge de navegación.
+  const items = NAV.filter((n) => puedeVer(rol, n.href));
+  const verAlertas = items.some((n) => n.href === "/alertas");
+
   const [urgentes, setUrgentes] = useState(0);
   useEffect(() => {
+    if (!verAlertas) return;
     let vivo = true;
     fetch("/api/alertas")
       .then((r) => r.json())
@@ -29,7 +36,8 @@ export default function Sidebar() {
     return () => {
       vivo = false;
     };
-  }, [path]);
+  }, [path, verAlertas]);
+
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white">
       <div className="flex items-center gap-2.5 px-5 py-5">
@@ -43,7 +51,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-2">
-        {NAV.map((n) => {
+        {items.map((n) => {
           const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
           return (
             <Link
@@ -51,9 +59,7 @@ export default function Sidebar() {
               href={n.href}
               aria-current={active ? "page" : undefined}
               className={`mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                active
-                  ? "bg-white/10 text-white"
-                  : "text-sidebar-muted hover:bg-white/5 hover:text-white"
+                active ? "bg-white/10 text-white" : "text-sidebar-muted hover:bg-white/5 hover:text-white"
               }`}
             >
               <span className="w-4 text-center text-base opacity-80">{n.icon}</span>
@@ -69,7 +75,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-sidebar-line px-5 py-4 text-2xs text-sidebar-muted">
-        Sin autenticación · entorno de desarrollo
+        Acceso por rol · DS Group
       </div>
     </aside>
   );
