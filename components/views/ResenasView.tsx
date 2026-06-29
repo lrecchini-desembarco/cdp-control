@@ -63,7 +63,9 @@ export default function ResenasView() {
   useEffect(() => {
     const o = window.location.origin;
     setOrigin(o);
-    setBaseUrl(o);
+    // El QR apunta a la URL pública por defecto (configurable), no a localhost.
+    const pub = process.env.NEXT_PUBLIC_PUBLIC_URL ?? "https://cdp-control.vercel.app";
+    setBaseUrl(/localhost|127\.0\.0\.1/.test(o) ? pub : o);
     cargarLocales();
     cargarDerivaciones();
   }, []);
