@@ -5,8 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 interface Local {
   nombre: string;
   googleUrl?: string;
+  marca?: string;
 }
 type Paso = "bienvenida" | "calificar" | "gracias";
+
+const MARCA_LABEL: Record<string, string> = {
+  desembarco: "El Desembarco",
+  tasty: "Mr Tasty",
+  mila: "Mila & Go",
+};
 
 export default function ReviewPublic() {
   const [locales, setLocales] = useState<Local[]>([]);
@@ -18,11 +25,18 @@ export default function ReviewPublic() {
   const [comentario, setComentario] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [googleUrl, setGoogleUrl] = useState<string | null>(null);
+  const [marca, setMarca] = useState<string | null>(null);
 
   useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("m");
+    setMarca(m);
     fetch("/api/locales")
       .then((r) => r.json())
-      .then((j) => j.ok && setLocales(j.locales))
+      .then((j) => {
+        if (!j.ok) return;
+        const list = m ? (j.locales as Local[]).filter((l) => (l.marca ?? "") === m) : j.locales;
+        setLocales(list);
+      })
       .catch(() => {});
   }, []);
 
@@ -68,7 +82,9 @@ export default function ReviewPublic() {
             <div className="text-center">
               <h1 className="font-display text-2xl font-semibold text-ink">¡Bienvenido!</h1>
               <p className="mt-1 text-sm text-muted">
-                Sistema de reseñas. Tu opinión nos ayuda a mejorar.
+                {marca && MARCA_LABEL[marca]
+                  ? `Reseñas de ${MARCA_LABEL[marca]}. Tu opinión nos ayuda a mejorar.`
+                  : "Sistema de reseñas. Tu opinión nos ayuda a mejorar."}
               </p>
               <div className="mt-6 text-left">
                 <label className="mb-1 block text-2xs font-medium uppercase tracking-wide text-faint">

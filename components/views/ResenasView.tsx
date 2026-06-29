@@ -27,9 +27,19 @@ export default function ResenasView() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [resumen, setResumen] = useState<Resumen>({ total: 0, promedio: 0, porEstrella: {} });
   const [qr, setQr] = useState("");
-  const [reviewUrl, setReviewUrl] = useState("");
-  const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "" });
+  const [qrMarca, setQrMarca] = useState("general");
+  const [origin, setOrigin] = useState("");
+  const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "", marca: "desembarco" });
   const [filtro, setFiltro] = useState("");
+
+  // Opciones de QR. Agregar una marca nueva acá la suma al selector y al filtro.
+  const QR_OPCIONES = [
+    { slug: "general", label: "General (todas)", titulo: "DS Group" },
+    { slug: "desembarco", label: "El Desembarco", titulo: "El Desembarco" },
+    { slug: "tasty", label: "Mr Tasty", titulo: "Mr Tasty" },
+  ];
+  const opcion = QR_OPCIONES.find((o) => o.slug === qrMarca) ?? QR_OPCIONES[0];
+  const reviewUrl = origin ? (qrMarca === "general" ? `${origin}/review` : `${origin}/review?m=${qrMarca}`) : "";
 
   function cargarLocales() {
     fetch("/api/locales")
@@ -48,27 +58,28 @@ export default function ResenasView() {
   }
 
   useEffect(() => {
-    const url = `${window.location.origin}/review`;
-    setReviewUrl(url);
-    QRCode.toDataURL(url, { width: 260, margin: 1 }).then(setQr).catch(() => {});
+    setOrigin(window.location.origin);
     cargarLocales();
     cargarReviews();
   }, []);
+  useEffect(() => {
+    if (reviewUrl) QRCode.toDataURL(reviewUrl, { width: 320, margin: 1 }).then(setQr).catch(() => {});
+  }, [reviewUrl]);
 
-  async function guardarLocal(nombre: string, googleUrl: string) {
+  async function guardarLocal(nombre: string, googleUrl: string, marca?: string) {
     const j = await (
       await fetch("/api/locales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, googleUrl }),
+        body: JSON.stringify({ nombre, googleUrl, marca }),
       })
     ).json();
     if (j.ok) setLocales(j.locales);
   }
   async function agregar() {
     if (!nuevo.nombre.trim()) return;
-    await guardarLocal(nuevo.nombre, nuevo.googleUrl);
-    setNuevo({ nombre: "", googleUrl: "" });
+    await guardarLocal(nuevo.nombre, nuevo.googleUrl, nuevo.marca);
+    setNuevo({ nombre: "", googleUrl: "", marca: "desembarco" });
   }
   async function quitar(nombre: string) {
     const j = await (await fetch(`/api/locales?nombre=${encodeURIComponent(nombre)}`, { method: "DELETE" })).json();
@@ -91,44 +102,68 @@ export default function ResenasView() {
         </p>
       </div>
 
-      {/* QR general (imprimible) */}
-      <div id="print-area">
-        <Card className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center">
-          {qr ? (
-            <img src={qr} alt="QR de reseñas" className="h-40 w-40 shrink-0 rounded-lg border border-line" />
-          ) : (
-            <div className="h-40 w-40 shrink-0 rounded-lg bg-ink/5" />
-          )}
-          <div className="text-center sm:text-left">
-            <p className="font-display text-base font-semibold text-ink">QR de reseñas (general)</p>
-            <p className="mt-1 text-sm text-muted">
-              Imprimilo y pegalo en cada local. El cliente lo escanea, elige su local y deja la reseña.
-            </p>
-            <p className="mt-2 break-all font-mono text-2xs text-faint">{reviewUrl}</p>
-            <div className="no-print mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-              {qr && (
-                <a
-                  href={qr}
-                  download="qr-resenas-ds.png"
-                  className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
-                >
-                  Descargar PNG
-                </a>
-              )}
-              <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()}>
-                Imprimir QR
-              </Button>
+      {/* Generador de QR por marca */}
+      <Card className="no-print p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-2xs font-medium uppercase tracking-wide text-faint">QR para</span>
+          {QR_OPCIONES.map((o) => (
+            <button
+              key={o.slug}
+              onClick={() => setQrMarca(o.slug)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                qrMarca === o.slug ? "border-action bg-action/10 text-action" : "border-line text-muted hover:bg-ink/5"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+          <div className="ml-auto flex gap-2">
+            {qr && (
               <a
-                href="/review"
-                target="_blank"
-                rel="noreferrer"
+                href={qr}
+                download={`qr-resenas-${qrMarca}.png`}
                 className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
               >
-                Ver pantalla del cliente →
+                Descargar PNG
               </a>
-            </div>
+            )}
+            <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()}>
+              Imprimir póster
+            </Button>
+            <a
+              href={reviewUrl || "/review"}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
+            >
+              Probar →
+            </a>
           </div>
-        </Card>
+        </div>
+        <p className="mt-2 break-all font-mono text-2xs text-faint">{reviewUrl}</p>
+      </Card>
+
+      {/* Póster imprimible (esto es lo único que sale en la impresión) */}
+      <div id="print-area" className="flex justify-center">
+        <div className="poster w-full max-w-sm rounded-card border border-line bg-surface px-8 py-10 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-action">{opcion.titulo}</p>
+          <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-ink">
+            ¿Cómo estuvo tu experiencia?
+          </h2>
+          <p className="mt-2 text-sm text-muted">Escaneá el código y dejanos tu reseña. ¡Te lleva 20 segundos!</p>
+
+          <div className="my-7 flex justify-center">
+            {qr ? (
+              <img src={qr} alt="QR de reseñas" className="h-60 w-60 rounded-xl border-4 border-ink p-1" />
+            ) : (
+              <div className="h-60 w-60 rounded-xl bg-ink/5" />
+            )}
+          </div>
+
+          <p className="text-2xl tracking-widest text-warn">★★★★★</p>
+          <p className="mt-2 text-sm font-medium text-ink">Apuntá la cámara del celular al código</p>
+          <p className="mt-6 text-2xs text-faint">DS Group · Sistema de reseñas</p>
+        </div>
       </div>
 
       {/* Reputación en Google (snapshot del Excel) */}
@@ -160,6 +195,16 @@ export default function ResenasView() {
               value={nuevo.nombre}
               onChange={(e) => setNuevo((n) => ({ ...n, nombre: e.target.value }))}
             />
+            <select
+              className={`${inputClass} sm:max-w-[160px]`}
+              value={nuevo.marca}
+              onChange={(e) => setNuevo((n) => ({ ...n, marca: e.target.value }))}
+            >
+              <option value="desembarco">El Desembarco</option>
+              <option value="tasty">Mr Tasty</option>
+              <option value="mila">Mila & Go</option>
+              <option value="otros">Otros</option>
+            </select>
             <input
               className={inputClass}
               placeholder="Link de Google (opcional)"

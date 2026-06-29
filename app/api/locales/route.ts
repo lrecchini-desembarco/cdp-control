@@ -13,8 +13,12 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   try {
-    const { nombre, googleUrl } = (await req.json()) as { nombre?: string; googleUrl?: string };
-    const locales = upsertLocal(String(nombre ?? ""), googleUrl);
+    const { nombre, googleUrl, marca } = (await req.json()) as {
+      nombre?: string;
+      googleUrl?: string;
+      marca?: "desembarco" | "tasty" | "mila" | "otros";
+    };
+    const locales = upsertLocal(String(nombre ?? ""), googleUrl, marca);
     return NextResponse.json({ ok: true, locales });
   } catch (e) {
     return NextResponse.json(
