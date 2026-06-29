@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SUCURSALES, PRODUCTO_MAP } from "@/lib/mock";
 import { BRANDS, brandById } from "@/lib/brands";
 import type { ProductoMap, Sucursal } from "@/lib/types";
@@ -12,6 +12,18 @@ export default function MapeosView() {
   const [prods, setProds] = useState<ProductoMap[]>(PRODUCTO_MAP);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [resaltado, setResaltado] = useState<string | null>(null);
+
+  // Deep-link desde el detalle del cruce: /mapeos?tab=prod&insumo=040022
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("tab") === "prod") setTab("prod");
+    const insumo = sp.get("insumo");
+    if (insumo) {
+      setResaltado(insumo);
+      setTimeout(() => setResaltado(null), 2500);
+    }
+  }, []);
 
   const sinMapear = sucs.filter((s) => !s.canonico).length;
 
@@ -129,7 +141,12 @@ export default function MapeosView() {
             </thead>
             <tbody>
               {prods.map((p, i) => (
-                <tr key={i} className="border-b border-line/70 last:border-0">
+                <tr
+                  key={i}
+                  className={`border-b border-line/70 last:border-0 ${
+                    resaltado === p.codigoCdp ? "bg-action/10" : ""
+                  }`}
+                >
                   <td className="px-4 py-2">
                     <span className="text-ink">{p.insumoNombre}</span>
                     <span className="ml-2 font-mono text-2xs text-faint">{p.codigoCdp}</span>

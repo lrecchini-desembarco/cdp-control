@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RavenItem } from "@/lib/types";
 import { fmtInt } from "@/lib/brands";
 import {
@@ -23,11 +23,17 @@ export default function RavenExplorer() {
   const [code, setCode] = useState("050027");
   const [date, setDate] = useState("2026-06-25");
   const [state, setState] = useState<State>({ kind: "idle" });
+  const codeRef = useRef(code);
+  const dateRef = useRef(date);
+  codeRef.current = code;
+  dateRef.current = date;
 
   async function consultar() {
     setState({ kind: "loading" });
     try {
-      const r = await fetch(`/api/raven?code=${encodeURIComponent(code)}&date=${encodeURIComponent(date)}`);
+      const r = await fetch(
+        `/api/raven?code=${encodeURIComponent(codeRef.current)}&date=${encodeURIComponent(dateRef.current)}`
+      );
       const j = await r.json();
       if (!r.ok) {
         setState({ kind: "error", msg: j.error ?? "Error desconocido." });
@@ -38,6 +44,23 @@ export default function RavenExplorer() {
       setState({ kind: "error", msg: "Fallo de red. Reintentá." });
     }
   }
+
+  // Deep-link desde el detalle del cruce: /raven?code=&date= precarga y consulta
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const c = sp.get("code");
+    const d = sp.get("date");
+    if (c) {
+      setCode(c);
+      codeRef.current = c;
+    }
+    if (d) {
+      setDate(d);
+      dateRef.current = d;
+    }
+    if (c && d) consultar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const max =
     state.kind === "ok"

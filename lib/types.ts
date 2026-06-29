@@ -39,6 +39,15 @@ export interface ProductoMap {
   modo: "directo" | "bom";
 }
 
+/** Cada SKU vendido que aporta a la venta equivalente de un insumo CDP */
+export interface CruceComponente {
+  sku: string;
+  nombre: string;
+  vendidas: number;   // unidades vendidas del SKU
+  factor: number;     // unidades de insumo CDP por 1 de venta
+  subtotal: number;   // vendidas * factor
+}
+
 /** Fila del cruce: por sucursal/producto/fecha */
 export interface CruceRow {
   fecha: string;
@@ -49,4 +58,5 @@ export interface CruceRow {
   pedidoCdp: number;       // lo que la sucursal pidió al CDP
   ventaEquiv: number;      // ventas traducidas a insumo CDP (via factor)
   unidad: string;
+  componentes: CruceComponente[]; // desglose que explica la venta equivalente
 }

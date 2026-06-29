@@ -50,30 +50,47 @@ export function recentDates(n: number): string[] {
   return out;
 }
 
-/** Genera el cruce mock: pedido al CDP vs venta equivalente, con desvíos variados */
+/**
+ * Genera el cruce mock. La venta equivalente se DERIVA de ventas por SKU x factor
+ * (mismo modelo que con datos reales), así el desglose del detalle cuadra con el total.
+ * El pedido al CDP se genera con un desvío sobre esa venta equivalente.
+ */
 export function buildCruce(): CruceRow[] {
   const rows: CruceRow[] = [];
   const dates = recentDates(7);
   let seed = 7;
   for (const p of PRODUCTS) {
+    const reglas = PRODUCTO_MAP.filter((m) => m.codigoCdp === p.code);
+    if (reglas.length === 0) continue;
     const branches = SUCURSALES.filter((s) => s.brand === p.brand && s.activa);
     for (const s of branches) {
       for (const fecha of dates) {
         const r = rng(seed++);
-        const base = 50 + Math.floor(r() * 400);
-        const pedido = base + Math.floor(r() * 50);
-        // desvío: a veces sub-pedido, a veces sobre-pedido
+        // ventas mock por SKO de cada regla -> componentes
+        const componentes = reglas.map((m) => {
+          const vendidas = 40 + Math.floor(r() * 320);
+          return {
+            sku: m.skuVenta,
+            nombre: m.skuNombre,
+            vendidas,
+            factor: m.factor,
+            subtotal: vendidas * m.factor,
+          };
+        });
+        const ventaEquiv = componentes.reduce((a, c) => a + c.subtotal, 0);
+        // pedido = venta equivalente +/- desvío (sobre o sub-pedido)
         const drift = (r() - 0.5) * 0.5; // -25%..+25%
-        const ventaEquiv = Math.max(0, Math.round(pedido * (1 - drift)));
+        const pedidoCdp = Math.max(1, Math.round(ventaEquiv * (1 + drift)));
         rows.push({
           fecha,
           brand: p.brand,
           sucursal: s.nombre,
           codigoCdp: p.code,
           producto: p.name,
-          pedidoCdp: pedido,
+          pedidoCdp,
           ventaEquiv,
           unidad: p.unit,
+          componentes,
         });
       }
     }

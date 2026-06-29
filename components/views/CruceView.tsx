@@ -5,6 +5,9 @@ import { buildCruce } from "@/lib/mock";
 import { BRANDS, brandById, fmtInt, fmtPct, severidad } from "@/lib/brands";
 import type { BrandId, CruceRow } from "@/lib/types";
 import { Badge, Card, EmptyState, Field, inputClass } from "@/components/ui/primitives";
+import DetalleModal from "@/components/views/DetalleModal";
+
+type RowDev = CruceRow & { dev: number; pct: number };
 
 type Sort = "desvio" | "producto" | "sucursal";
 
@@ -41,6 +44,7 @@ export default function CruceView() {
   const [fecha, setFecha] = useState<string>(dates[0]);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("desvio");
+  const [detalle, setDetalle] = useState<RowDev | null>(null);
 
   const rows = useMemo(() => {
     let r: CruceRow[] = all.filter((x) => x.fecha === fecha);
@@ -151,7 +155,7 @@ export default function CruceView() {
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
           <span className="text-2xs font-medium uppercase tracking-wide text-faint">
-            {rows.length} líneas
+            {rows.length} líneas · tocá una para ver el detalle
           </span>
           <Legend />
         </div>
@@ -179,7 +183,15 @@ export default function CruceView() {
                 {rows.map((r, i) => {
                   const sev = severidad(r.pct);
                   return (
-                    <tr key={i} className="border-b border-line/70 last:border-0 hover:bg-ink/[0.015]">
+                    <tr
+                      key={i}
+                      onClick={() => setDetalle(r)}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setDetalle(r)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Ver detalle de ${r.producto} en ${r.sucursal}`}
+                      className="cursor-pointer border-b border-line/70 last:border-0 hover:bg-ink/[0.025]"
+                    >
                       <td className="px-4 py-2.5">
                         <span className="inline-flex items-center gap-2">
                           <span
@@ -209,6 +221,8 @@ export default function CruceView() {
           </div>
         )}
       </Card>
+
+      <DetalleModal row={detalle} onClose={() => setDetalle(null)} />
     </div>
   );
 }
