@@ -10,6 +10,7 @@ const NAV = [
   { href: "/", label: "Resumen", icon: "◰" },
   { href: "/alertas", label: "Alertas", icon: "!" },
   { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄" },
+  { href: "/ventas", label: "Ventas por turno", icon: "▦" },
   { href: "/raven", label: "Consultar Raven", icon: "↧" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
   { href: "/catalogo", label: "Control de catálogo", icon: "▤" },

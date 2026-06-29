@@ -49,6 +49,7 @@ export const tangoVentasSource: VentasSource = {
           CONVERT(varchar(10), fecha, 23) AS fecha,
           sucursal_canonico,
           sku,
+          turno,
           unidades
         FROM dbo.vw_VentasInsumoDiaria
         WHERE fecha BETWEEN @desde AND @hasta
@@ -60,6 +61,7 @@ export const tangoVentasSource: VentasSource = {
       sku: String(r.sku),
       sucursalCanonico: String(r.sucursal_canonico),
       unidades: Number(r.unidades) || 0,
+      turno: r.turno ? String(r.turno) : undefined,
     }));
   },
 };

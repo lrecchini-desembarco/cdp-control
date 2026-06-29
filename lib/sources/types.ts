@@ -11,12 +11,13 @@ export interface PedidoCdp {
   unidades: number;
 }
 
-/** Una línea de venta: unidades vendidas de un SKU en una sucursal, un día. */
+/** Una línea de venta: unidades vendidas de un SKU en una sucursal, un día y turno. */
 export interface VentaSku {
   fecha: string;            // ISO AAAA-MM-DD
   sku: string;              // Cód. Art. Tango del producto vendido
   sucursalCanonico: string; // código canónico de la sucursal
   unidades: number;
+  turno?: string;           // mediodia | tarde | noche (slug de lib/turnos)
 }
 
 /** Rango de consulta común a todas las fuentes. */

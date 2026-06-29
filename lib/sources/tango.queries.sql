@@ -7,15 +7,18 @@
 
    >>> ESTE ES UN TEMPLATE. Mapeá los nombres reales de tu base. <<<
 
-   Salida esperada (4 columnas, sí o sí):
+   Salida esperada (5 columnas, sí o sí):
      fecha              DATE       -> fecha del comprobante de venta
      sucursal_canonico  VARCHAR    -> MISMO código canónico que en Mapeos (DS-FLO, MT-PIL…)
      sku                VARCHAR    -> Cód. Art. Tango del producto vendido (el skuVenta del mapeo)
-     unidades           DECIMAL    -> unidades vendidas de ese SKU, esa fecha, esa sucursal
+     turno              VARCHAR    -> 'mediodia' | 'tarde' | 'noche' (según la hora del comprobante)
+     unidades           DECIMAL    -> unidades vendidas de ese SKU, esa fecha, sucursal y turno
 
    Notas para mapear tu esquema Tango:
    - Las ventas con detalle por artículo viven en los RENGLONES de los
      comprobantes de venta (facturas A/B, tickets), no en la cabecera.
+   - `turno` se deriva de la HORA del comprobante. Ajustá los rangos a tu
+     operación (deben coincidir con lib/turnos.ts).
    - `sucursal_canonico` debe coincidir EXACTO con el código canónico que
      cargás en la pantalla Mapeos (no el nombre, no el código Raven). Si en
      Tango la boca sale como depósito / punto de venta, traducila acá.
@@ -28,6 +31,11 @@ SELECT
     CAST(c.fecha_emision AS DATE)              AS fecha,
     map.codigo_canonico                        AS sucursal_canonico,  -- << traducí tu boca al canónico
     r.cod_articulo                             AS sku,
+    CASE
+      WHEN DATEPART(HOUR, c.fecha_emision) >= 11 AND DATEPART(HOUR, c.fecha_emision) < 16 THEN 'mediodia'
+      WHEN DATEPART(HOUR, c.fecha_emision) >= 16 AND DATEPART(HOUR, c.fecha_emision) < 20 THEN 'tarde'
+      ELSE 'noche'
+    END                                        AS turno,             -- << ajustar rangos a tu operación
     SUM(r.cantidad)                            AS unidades
 FROM   dbo.RENGLONES_VENTA      r          -- << reemplazar por tu tabla de renglones
 JOIN   dbo.COMPROBANTES_VENTA   c          -- << cabecera de comprobantes
@@ -39,7 +47,12 @@ WHERE  c.anulado = 0                       -- << ajustar a tu flag de anulación
 GROUP BY
     CAST(c.fecha_emision AS DATE),
     map.codigo_canonico,
-    r.cod_articulo;
+    r.cod_articulo,
+    CASE
+      WHEN DATEPART(HOUR, c.fecha_emision) >= 11 AND DATEPART(HOUR, c.fecha_emision) < 16 THEN 'mediodia'
+      WHEN DATEPART(HOUR, c.fecha_emision) >= 16 AND DATEPART(HOUR, c.fecha_emision) < 20 THEN 'tarde'
+      ELSE 'noche'
+    END;
 GO
 
 -- Usuario SQL solo-lectura para la app:

@@ -1,6 +1,10 @@
 import { recentDates, brandDeInsumo } from "../catalogo";
 import { getMapeos } from "../mapeos-store";
+import { TURNOS } from "../turnos";
 import type { PedidoCdp, VentaSku, PedidosSource, VentasSource, RangoQuery } from "./types";
+
+// Peso de cada turno (la noche concentra más venta en gastronomía).
+const PESO_TURNO: Record<string, number> = { mediodia: 0.4, tarde: 0.15, noche: 0.45 };
 
 // Fuente de DESARROLLO. No se usa en producción (DATA_SOURCE=live). Genera
 // ventas por SKU y pedidos al CDP por separado, con el mismo shape que las
@@ -30,8 +34,12 @@ export const mockVentasSource: VentasSource = {
       const reglas = productoMap.filter((m) => brandDeInsumo(m.codigoCdp) === s.brand);
       for (const m of reglas) {
         for (const fecha of fechas) {
-          const unidades = 40 + Math.floor(r() * 320);
-          out.push({ fecha, sku: m.skuVenta, sucursalCanonico: s.canonico, unidades });
+          const diario = 40 + Math.floor(r() * 320);
+          for (const t of TURNOS) {
+            const peso = PESO_TURNO[t.slug] ?? 1 / TURNOS.length;
+            const unidades = Math.max(0, Math.round(diario * peso * (0.7 + r() * 0.6)));
+            out.push({ fecha, sku: m.skuVenta, sucursalCanonico: s.canonico, unidades, turno: t.slug });
+          }
         }
       }
     }
