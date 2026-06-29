@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ring: #155E63;
+}
+
+html, body {
+  background: #F7F7F5;
+  color: #18181B;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* números tabulares para columnas de datos */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* foco visible y consistente (Nielsen: visibilidad / accesibilidad) */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* scrollbar discreta */
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-thumb { background: #D9D6CD; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #C7C3B8; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton {
+  position: relative; overflow: hidden; background: #ECEAE3;
+}
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+  animation: shimmer 1.3s infinite;
+}
