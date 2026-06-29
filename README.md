@@ -26,6 +26,8 @@ Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
   semáforo por tolerancia (≤5% / 5–15% / >15%).
 - **Consultar Raven** (`/raven`) — consulta en vivo por código + fecha de entrega. Desglose por sucursal.
 - **Mapeos** (`/mapeos`) — sucursales (Raven → código canónico) y productos (insumo CDP → SKU → factor/BOM).
+- **Control de catálogo** (`/catalogo`) — audita el maestro de Tango (precio $0, cross-brand, sin marca,
+  candidatos a baja), prioriza y exporta la lista "a corregir". Ver [`docs/catalogo.md`](docs/catalogo.md).
 
 ## Datos
 
@@ -57,13 +59,13 @@ Tango creada + usuario solo-lectura, y las credenciales `TANGO_*`. Detalle en `d
 ## Estructura
 
 ```
-app/              páginas + route handlers (/api/raven · /api/cruce · /api/alertas)
+app/              páginas + route handlers (/api/raven · /api/cruce · /api/alertas · /api/catalogo)
 components/ui     primitivos (Card, Badge, Button, EmptyState, ErrorState…)
-components/views  AlertasView · CruceView · RavenExplorer · MapeosView · DetalleModal
+components/views  AlertasView · CruceView · RavenExplorer · MapeosView · CatalogoView · DetalleModal
 components/layout Sidebar · Topbar
-lib/              types · brands (format) · catalogo (config real) · cruce (motor) · alertas
-lib/sources/      adapters de datos: raven (pedidos) · tango/mssql (ventas) · mock · index (selector)
-docs/             documentación funcional (datos.md · alertas.md)
+lib/              types · brands (format) · catalogo (config) · cruce (motor) · alertas · catalogo-control
+lib/sources/      adapters: raven (pedidos) · tango (ventas) · catalogo-tango (maestro) · mock · index
+docs/             documentación funcional (datos.md · alertas.md · catalogo.md)
 ```
 
 ## Próximo paso

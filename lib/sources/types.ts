@@ -34,3 +34,8 @@ export interface PedidosSource {
 export interface VentasSource {
   getVentas(q: RangoQuery): Promise<VentaSku[]>;
 }
+
+/** Fuente del maestro de artículos para auditar calidad de datos (hoy: Tango). */
+export interface CatalogoSource {
+  getCatalogo(): Promise<import("../types").ArticuloCatalogo[]>;
+}

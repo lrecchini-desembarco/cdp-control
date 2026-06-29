@@ -10,6 +10,7 @@ const NAV = [
   { href: "/cruce", label: "Cruce CDP vs ventas", icon: "⇄" },
   { href: "/raven", label: "Consultar Raven", icon: "↧" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
+  { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
 ];
 
 export default function Sidebar() {

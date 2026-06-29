@@ -88,6 +88,46 @@ export interface ResumenAlertas {
   info: number;
 }
 
+/** Lista de precios asignada a un artículo (con su marca, para detectar cross-brand) */
+export interface ListaPrecio {
+  lista: number;
+  nombre: string;
+  marca: BrandId | null; // marca a la que pertenece la lista (ej. "DESEMBARCO AMBA")
+  precio: number;
+}
+
+/** Artículo del maestro de Tango, con lo necesario para auditar calidad de datos */
+export interface ArticuloCatalogo {
+  sku: string;
+  nombre: string;
+  marca: BrandId | null;             // de la pestaña Clasificación; null = sin clasificar
+  activo: boolean;                   // habilitado para venta
+  ultimaVentaFecha: string | null;   // ISO; null si nunca registró ventas
+  listas: ListaPrecio[];
+}
+
+export type ProblemaCatalogoTipo =
+  | "precio-cero"   // vendible a $0 (o sin lista asignada)
+  | "cross-brand"   // tiene lista de precios de otra marca
+  | "sin-marca"     // sin clasificación de marca → ensucia el filtro del POS
+  | "sin-venta";    // activo pero sin ventas hace mucho → candidato a baja
+
+/** Un artículo con uno o más problemas de calidad de datos */
+export interface ProblemaCatalogo {
+  sku: string;
+  nombre: string;
+  marca: BrandId | null;
+  activo: boolean;
+  severidad: Severidad; // la peor entre sus problemas
+  problemas: { tipo: ProblemaCatalogoTipo; severidad: Severidad; detalle: string }[];
+}
+
+export interface ResumenCatalogo {
+  articulos: number;    // total auditado
+  conProblemas: number;
+  porTipo: Record<ProblemaCatalogoTipo, number>;
+}
+
 /** Fila del cruce: por sucursal/producto/fecha */
 export interface CruceRow {
   fecha: string;

@@ -1,4 +1,4 @@
-import type { PedidosSource, VentasSource } from "./types";
+import type { CatalogoSource, PedidosSource, VentasSource } from "./types";
 
 /**
  * Selector de fuentes de datos según DATA_SOURCE.
@@ -21,6 +21,17 @@ export function getSources(): { pedidos: PedidosSource; ventas: VentasSource } {
   const { ravenPedidosSource } = require("./raven") as typeof import("./raven");
   const { tangoVentasSource } = require("./tango") as typeof import("./tango");
   return { pedidos: ravenPedidosSource, ventas: tangoVentasSource };
+}
+
+/** Fuente del maestro de artículos (catálogo) según DATA_SOURCE. */
+export function getCatalogoSource(): CatalogoSource {
+  const source = process.env.DATA_SOURCE ?? "live";
+  if (source === "mock") {
+    const { mockCatalogoSource } = require("./catalogo-mock") as typeof import("./catalogo-mock");
+    return mockCatalogoSource;
+  }
+  const { tangoCatalogoSource } = require("./catalogo-tango") as typeof import("./catalogo-tango");
+  return tangoCatalogoSource;
 }
 
 export const dataSourceName = () => process.env.DATA_SOURCE ?? "live";
