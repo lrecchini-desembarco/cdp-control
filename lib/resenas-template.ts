@@ -17,20 +17,16 @@ export const ESCALA_LABEL: Record<number, string> = {
 
 export const QA_CATEGORIAS: CategoriaQA[] = [
   {
-    nombre: "Limpieza e higiene",
-    criterios: ["Salón y mesas", "Cocina y plancha", "Baños", "Uniforme e higiene del personal"],
+    nombre: "Limpieza",
+    criterios: ["Salón y mesas", "Cocina", "Baños"],
   },
   {
-    nombre: "Atención al cliente",
-    criterios: ["Saludo y bienvenida", "Tiempo de espera", "Amabilidad", "Resolución de reclamos"],
+    nombre: "Atención",
+    criterios: ["Amabilidad", "Tiempo de espera", "Presentación del personal"],
   },
   {
     nombre: "Producto",
-    criterios: ["Temperatura", "Presentación", "Porción según receta", "Frescura de insumos"],
-  },
-  {
-    nombre: "Operación",
-    criterios: ["Stock de insumos clave", "Cartelería y precios visibles", "Orden del puesto", "Cumplimiento de recetas"],
+    criterios: ["Temperatura", "Presentación", "Porción según receta"],
   },
 ];
 

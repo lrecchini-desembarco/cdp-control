@@ -2,32 +2,37 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { QA_CATEGORIAS, ESCALA, ESCALA_LABEL, TODOS_CRITERIOS } from "@/lib/resenas-template";
-import { Button, Card, Field, inputClass } from "@/components/ui/primitives";
+import { Badge, Button, Card, Field, inputClass } from "@/components/ui/primitives";
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const k = (cat: string, cr: string) => `${cat} · ${cr}`;
 
+type Paso = "bienvenida" | "calificar" | "listo";
+interface ResenaHist {
+  id: string;
+  creadoEn: string;
+  fecha: string;
+  local: string;
+  evaluador: string;
+  pct: number;
+}
+
 export default function ResenasView() {
+  const [paso, setPaso] = useState<Paso>("bienvenida");
   const [locales, setLocales] = useState<string[]>([]);
   const [local, setLocal] = useState("");
+  const [nuevoLocal, setNuevoLocal] = useState("");
   const [fecha, setFecha] = useState(hoyISO());
   const [evaluador, setEvaluador] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({});
   const [obs, setObs] = useState("");
+  const [hist, setHist] = useState<ResenaHist[]>([]);
+  const [guardando, setGuardando] = useState(false);
 
-  // Locales = sucursales activas y mapeadas (las que operan).
   useEffect(() => {
-    fetch("/api/mapeos")
+    fetch("/api/locales")
       .then((r) => r.json())
-      .then((j) => {
-        if (j.ok) {
-          const nombres = (j.sucursales as { nombre: string; activa: boolean }[])
-            .filter((s) => s.activa)
-            .map((s) => s.nombre);
-          setLocales(nombres);
-          setLocal((prev) => prev || nombres[0] || "");
-        }
-      })
+      .then((j) => j.ok && setLocales(j.locales))
       .catch(() => {});
     fetch("/api/auth/me")
       .then((r) => r.json())
@@ -37,80 +42,177 @@ export default function ResenasView() {
 
   const totales = useMemo(() => {
     const vals = TODOS_CRITERIOS.map((c) => scores[c]).filter((v): v is number => typeof v === "number");
-    const completados = vals.length;
     const suma = vals.reduce((a, v) => a + v, 0);
-    const max = completados * 5;
-    const pct = max ? suma / max : 0;
-    return { completados, total: TODOS_CRITERIOS.length, suma, max, pct };
+    const max = vals.length * 5;
+    return { completados: vals.length, total: TODOS_CRITERIOS.length, suma, max, pct: max ? suma / max : 0 };
   }, [scores]);
 
   const tono = totales.pct >= 0.8 ? "text-ok" : totales.pct >= 0.6 ? "text-warn" : "text-bad";
+  const completa = totales.completados === totales.total;
 
+  async function agregarLocal() {
+    const nombre = nuevoLocal.trim();
+    if (!nombre) return;
+    const j = await (
+      await fetch("/api/locales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre }),
+      })
+    ).json();
+    if (j.ok) {
+      setLocales(j.locales);
+      setLocal(nombre);
+      setNuevoLocal("");
+    }
+  }
+
+  function comenzar() {
+    setScores({});
+    setObs("");
+    setFecha(hoyISO());
+    setPaso("calificar");
+  }
+
+  async function subir() {
+    setGuardando(true);
+    try {
+      const j = await (
+        await fetch("/api/resenas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            local,
+            fecha,
+            evaluador,
+            scores,
+            observaciones: obs,
+            suma: totales.suma,
+            max: totales.max,
+            pct: totales.pct,
+          }),
+        })
+      ).json();
+      if (j.ok) {
+        const h = await (await fetch(`/api/resenas?local=${encodeURIComponent(local)}`)).json();
+        if (h.ok) setHist(h.resenas);
+        setPaso("listo");
+      }
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  // ───────────────────────── Paso 1: bienvenida ─────────────────────────
+  if (paso === "bienvenida") {
+    return (
+      <div className="mx-auto max-w-xl py-6">
+        <Card className="p-6 text-center">
+          <p className="text-2xs font-medium uppercase tracking-wide text-faint">DS Group</p>
+          <h1 className="mt-1 font-display text-2xl font-semibold text-ink">
+            Bienvenidos al sistema de reseñas
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {local ? `Local: ${local}` : "Seleccioná tu local para empezar."}
+          </p>
+
+          <div className="mx-auto mt-5 max-w-sm space-y-3 text-left">
+            <Field label="Local">
+              <select className={inputClass} value={local} onChange={(e) => setLocal(e.target.value)}>
+                <option value="">— Elegí un local —</option>
+                {locales.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <details className="rounded-lg border border-line bg-paper px-3 py-2">
+              <summary className="cursor-pointer select-none text-2xs font-medium text-muted">
+                ¿No está tu local? Agregalo
+              </summary>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className={inputClass}
+                  placeholder="Nombre del local"
+                  value={nuevoLocal}
+                  onChange={(e) => setNuevoLocal(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), agregarLocal())}
+                />
+                <Button variant="outline" className="!py-2 !text-xs" onClick={agregarLocal} disabled={!nuevoLocal.trim()}>
+                  Agregar
+                </Button>
+              </div>
+            </details>
+
+            <Button className="w-full" onClick={comenzar} disabled={!local}>
+              Comenzar reseña →
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ──────────────────── Paso 2 y 3: calificar / listo ────────────────────
   return (
-    <div className="space-y-5">
-      <div className="no-print flex items-start justify-between gap-4">
+    <div className="space-y-4">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-semibold text-ink">Reseñas de local</h1>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted">
-            Elegí un local, calificá cada punto del 1 al 5 y generá la planilla imprimible. Se usa para la
-            visita / auditoría de calidad de cada sucursal.
+          <h1 className="font-display text-xl font-semibold text-ink">Reseña — {local}</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            {paso === "listo"
+              ? "Reseña guardada. Podés imprimirla o cargar una nueva."
+              : "Calificá cada punto del 1 al 5 y subila."}
           </p>
         </div>
-        <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()} disabled={!local}>
-          Imprimir planilla
-        </Button>
+        <div className="flex items-center gap-2">
+          {paso === "listo" && <Badge tone="ok">Subida ✓</Badge>}
+          <Button variant="ghost" className="!py-1.5 !text-xs" onClick={() => setPaso("bienvenida")}>
+            ← Cambiar local
+          </Button>
+          <Button variant="outline" className="!py-1.5 !text-xs" onClick={() => window.print()}>
+            Imprimir
+          </Button>
+          {paso === "calificar" ? (
+            <Button className="!py-1.5 !text-xs" onClick={subir} disabled={guardando || totales.completados === 0}>
+              {guardando ? "Subiendo…" : "Subir reseña"}
+            </Button>
+          ) : (
+            <Button className="!py-1.5 !text-xs" onClick={comenzar}>
+              Nueva reseña
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Selección (no se imprime) */}
-      <Card className="no-print p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Field label="Local">
-            <select className={inputClass} value={local} onChange={(e) => setLocal(e.target.value)}>
-              {locales.length === 0 && <option value="">Cargando…</option>}
-              {locales.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Fecha de visita">
-            <input type="date" className={inputClass} value={fecha} onChange={(e) => setFecha(e.target.value)} />
-          </Field>
-          <Field label="Evaluador">
-            <input
-              className={inputClass}
-              placeholder="Tu nombre o email"
-              value={evaluador}
-              onChange={(e) => setEvaluador(e.target.value)}
-            />
-          </Field>
-        </div>
-      </Card>
+      {paso === "calificar" && !completa && (
+        <p className="no-print text-2xs text-faint">
+          {totales.completados}/{totales.total} puntos calificados. Podés subir igual, pero lo ideal es
+          completar todos.
+        </p>
+      )}
 
-      {/* Planilla (esto es lo que se imprime) */}
+      {/* Planilla imprimible */}
       <div id="print-area">
         <Card className="p-5">
-          {/* Encabezado del imprimible */}
           <div className="mb-4 flex items-start justify-between border-b border-line pb-3">
             <div>
-              <p className="font-display text-base font-semibold text-ink">Reseña de calidad — {local || "—"}</p>
+              <p className="font-display text-base font-semibold text-ink">Reseña de calidad — {local}</p>
               <p className="mt-0.5 text-xs text-muted">
                 Fecha: {fecha} · Evaluador: {evaluador || "—"}
               </p>
             </div>
             <div className="text-right">
               <p className="text-2xs uppercase tracking-wide text-faint">Puntaje</p>
-              <p className={`font-display text-2xl font-semibold tnum ${tono}`}>
-                {Math.round(totales.pct * 100)}%
-              </p>
+              <p className={`font-display text-2xl font-semibold tnum ${tono}`}>{Math.round(totales.pct * 100)}%</p>
               <p className="text-2xs text-faint">
                 {totales.suma}/{totales.max || 0} · {totales.completados}/{totales.total} ítems
               </p>
             </div>
           </div>
 
-          {/* Categorías y criterios */}
           <div className="space-y-4">
             {QA_CATEGORIAS.map((cat) => (
               <div key={cat.nombre}>
@@ -129,10 +231,8 @@ export default function ResenasView() {
                               type="button"
                               onClick={() => setScores((s) => ({ ...s, [key]: n }))}
                               title={ESCALA_LABEL[n]}
-                              className={`grid h-7 w-7 place-items-center rounded-md border text-xs font-medium transition-colors ${
-                                val === n
-                                  ? "border-action bg-action text-white"
-                                  : "border-line text-muted hover:bg-ink/5"
+                              className={`grid h-8 w-8 place-items-center rounded-md border text-xs font-medium transition-colors ${
+                                val === n ? "border-action bg-action text-white" : "border-line text-muted hover:bg-ink/5"
                               }`}
                             >
                               {n}
@@ -147,11 +247,10 @@ export default function ResenasView() {
             ))}
           </div>
 
-          {/* Observaciones */}
           <div className="mt-4 border-t border-line pt-3">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Observaciones</p>
             <textarea
-              className={`${inputClass} min-h-[70px] resize-y`}
+              className={`${inputClass} min-h-[64px] resize-y`}
               placeholder="Comentarios, pendientes, compromisos para la próxima visita…"
               value={obs}
               onChange={(e) => setObs(e.target.value)}
@@ -162,12 +261,33 @@ export default function ResenasView() {
             <div className="border-t border-ink/30 pt-1 text-center">Firma evaluador</div>
             <div className="border-t border-ink/30 pt-1 text-center">Firma encargado del local</div>
           </div>
-
-          <p className="mt-3 text-2xs text-faint">
-            Escala: 1 Malo · 2 Regular · 3 Bien · 4 Muy bien · 5 Excelente
-          </p>
+          <p className="mt-3 text-2xs text-faint">Escala: 1 Malo · 2 Regular · 3 Bien · 4 Muy bien · 5 Excelente</p>
         </Card>
       </div>
+
+      {/* Historial del local */}
+      {paso === "listo" && hist.length > 0 && (
+        <Card className="no-print overflow-hidden">
+          <div className="border-b border-line px-4 py-2 text-2xs font-medium uppercase tracking-wide text-faint">
+            Historial de {local}
+          </div>
+          <table className="w-full text-sm">
+            <tbody>
+              {hist.slice(0, 8).map((h) => (
+                <tr key={h.id} className="border-b border-line/70 last:border-0">
+                  <td className="px-4 py-2 text-ink">{h.fecha}</td>
+                  <td className="px-4 py-2 text-2xs text-muted">{h.evaluador}</td>
+                  <td className="px-4 py-2 text-right">
+                    <Badge tone={h.pct >= 0.8 ? "ok" : h.pct >= 0.6 ? "warn" : "bad"}>
+                      {Math.round(h.pct * 100)}%
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 }

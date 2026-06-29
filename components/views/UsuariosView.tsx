@@ -8,6 +8,7 @@ import { Badge, Button, Card, EmptyState, Field, inputClass, Skeleton } from "@/
 interface Usuario {
   email: string;
   rol: Rol;
+  tieneClave?: boolean;
 }
 
 const tonoRol: Record<Rol, "action" | "warn" | "neutral"> = {
@@ -21,6 +22,7 @@ export default function UsuariosView() {
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [email, setEmail] = useState("");
   const [rol, setRol] = useState<Rol>("local");
+  const [pass, setPass] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function cargar() {
@@ -45,12 +47,13 @@ export default function UsuariosView() {
       await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, rol }),
+        body: JSON.stringify({ email, rol, password: pass }),
       })
     ).json();
     if (j.ok) {
       setUsuarios(j.usuarios);
       setEmail("");
+      setPass("");
       setMsg({ ok: true, text: "Usuario guardado." });
     } else {
       setMsg({ ok: false, text: j.error ?? "No se pudo agregar." });
@@ -75,7 +78,7 @@ export default function UsuariosView() {
 
       {/* Alta */}
       <Card className="p-4">
-        <form onSubmit={agregar} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px_auto] sm:items-end">
+        <form onSubmit={agregar} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px_160px_auto] sm:items-end">
           <Field label="Email">
             <input
               type="email"
@@ -93,6 +96,15 @@ export default function UsuariosView() {
                 </option>
               ))}
             </select>
+          </Field>
+          <Field label="Clave (opcional)" hint="Si la dejás vacía, usa la genérica.">
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="propia del usuario"
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+            />
           </Field>
           <Button type="submit" disabled={!email}>
             Agregar / actualizar
@@ -121,6 +133,7 @@ export default function UsuariosView() {
               <tr className="border-b border-line text-left text-2xs uppercase tracking-wide text-faint">
                 <th className="px-4 py-2 font-medium">Email</th>
                 <th className="px-4 py-2 font-medium">Rol</th>
+                <th className="px-4 py-2 font-medium">Clave</th>
                 <th className="px-4 py-2 font-medium">Ve</th>
                 <th className="px-4 py-2 text-right font-medium">Acción</th>
               </tr>
@@ -131,6 +144,9 @@ export default function UsuariosView() {
                   <td className="px-4 py-2.5 text-ink">{u.email}</td>
                   <td className="px-4 py-2.5">
                     <Badge tone={tonoRol[u.rol]}>{ROLES[u.rol].label}</Badge>
+                  </td>
+                  <td className="px-4 py-2.5 text-2xs text-muted">
+                    {u.tieneClave ? "propia" : "genérica"}
                   </td>
                   <td className="px-4 py-2.5 text-2xs text-muted">
                     {ROLES[u.rol].nav.filter((h) => h !== "/guia").length} pantallas
