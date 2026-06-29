@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
-import { resumenAlertas } from "@/lib/alertas";
+import { useEffect, useState } from "react";
 
 const NAV = [
   { href: "/", label: "Resumen", icon: "◰" },
@@ -16,10 +15,19 @@ const NAV = [
 export default function Sidebar() {
   const path = usePathname();
   // Contador de alertas urgentes (críticas + altas) para el badge de navegación.
-  const urgentes = useMemo(() => {
-    const r = resumenAlertas();
-    return r.critica + r.alta;
-  }, []);
+  const [urgentes, setUrgentes] = useState(0);
+  useEffect(() => {
+    let vivo = true;
+    fetch("/api/alertas")
+      .then((r) => r.json())
+      .then((j) => {
+        if (vivo && j.ok) setUrgentes((j.resumen?.critica ?? 0) + (j.resumen?.alta ?? 0));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [path]);
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-line bg-sidebar text-white">
       <div className="flex items-center gap-2.5 px-5 py-5">

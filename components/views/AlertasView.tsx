@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { detectarAlertas, resumenAlertas } from "@/lib/alertas";
+import { useEffect, useMemo, useState } from "react";
 import { brandById } from "@/lib/brands";
-import type { Alerta, AlertaTipo, Severidad } from "@/lib/types";
-import { Badge, Card, EmptyState } from "@/components/ui/primitives";
+import type { Alerta, AlertaTipo, ResumenAlertas, Severidad } from "@/lib/types";
+import { Badge, Card, EmptyState, ErrorState, Skeleton } from "@/components/ui/primitives";
+
+const RESUMEN_VACIO: ResumenAlertas = { total: 0, critica: 0, alta: 0, media: 0, info: 0 };
 
 // Metadatos de presentación: cómo se ve cada nivel de urgencia.
 const SEV: Record<
@@ -30,12 +31,34 @@ const TIPO: Record<AlertaTipo, string> = {
 type FiltroSev = "todas" | Severidad;
 type FiltroTipo = "todos" | AlertaTipo;
 
+type Status = "loading" | "ok" | "error";
+
 export default function AlertasView() {
-  const alertas = useMemo(() => detectarAlertas(), []);
-  const resumen = useMemo(() => resumenAlertas(alertas), [alertas]);
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [resumen, setResumen] = useState<ResumenAlertas>(RESUMEN_VACIO);
+  const [status, setStatus] = useState<Status>("loading");
+  const [errMsg, setErrMsg] = useState("");
 
   const [sev, setSev] = useState<FiltroSev>("todas");
   const [tipo, setTipo] = useState<FiltroTipo>("todos");
+
+  async function cargar() {
+    setStatus("loading");
+    try {
+      const r = await fetch("/api/alertas");
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error ?? "No se pudieron calcular las alertas.");
+      setAlertas(j.alertas as Alerta[]);
+      setResumen(j.resumen as ResumenAlertas);
+      setStatus("ok");
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "Error desconocido.");
+      setStatus("error");
+    }
+  }
+  useEffect(() => {
+    cargar();
+  }, []);
 
   const visibles = useMemo(
     () =>
@@ -81,7 +104,15 @@ export default function AlertasView() {
       </Card>
 
       {/* Lista */}
-      {visibles.length === 0 ? (
+      {status === "loading" ? (
+        <div className="space-y-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      ) : status === "error" ? (
+        <ErrorState msg={errMsg} onRetry={cargar} />
+      ) : visibles.length === 0 ? (
         <EmptyState
           title={alertas.length === 0 ? "Todo en orden" : "Sin alertas para este filtro"}
           desc={

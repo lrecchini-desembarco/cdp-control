@@ -1,4 +1,5 @@
-import { buildCruce, SUCURSALES, PRODUCTO_MAP, PRODUCTS } from "./mock";
+import { SUCURSALES, PRODUCTO_MAP, PRODUCTS } from "./catalogo";
+import { getCruce } from "./cruce";
 import { fmtInt, fmtPct } from "./brands";
 import type { Alerta, CruceRow, ResumenAlertas, Severidad } from "./types";
 
@@ -21,8 +22,7 @@ const desvio = (r: CruceRow) =>
  * para que sumar o ajustar una sea local. Es una función pura: mismas entradas,
  * mismas salidas (clave para testear y, más adelante, para deduplicar/silenciar).
  */
-export function detectarAlertas(): Alerta[] {
-  const cruce = buildCruce();
+export function detectarAlertas(cruce: CruceRow[]): Alerta[] {
   const fechas = Array.from(new Set(cruce.map((r) => r.fecha))).sort().reverse();
   const ultima = fechas[0];
   const alertas: Alerta[] = [];
@@ -157,8 +157,18 @@ export function detectarAlertas(): Alerta[] {
 }
 
 /** Conteo por severidad para badges y KPIs. */
-export function resumenAlertas(alertas: Alerta[] = detectarAlertas()): ResumenAlertas {
+export function resumenAlertas(alertas: Alerta[]): ResumenAlertas {
   const r: ResumenAlertas = { total: alertas.length, critica: 0, alta: 0, media: 0, info: 0 };
   for (const a of alertas) r[a.severidad]++;
   return r;
+}
+
+/**
+ * Orquestador: trae el cruce de las fuentes reales y corre la detección.
+ * Se usa desde la API route y desde componentes de servidor.
+ */
+export async function getAlertas(): Promise<{ alertas: Alerta[]; resumen: ResumenAlertas }> {
+  const cruce = await getCruce();
+  const alertas = detectarAlertas(cruce);
+  return { alertas, resumen: resumenAlertas(alertas) };
 }

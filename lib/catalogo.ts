@@ -1,4 +1,10 @@
-import type { Sucursal, ProductoMap, CruceRow, BrandId } from "./types";
+import type { Sucursal, ProductoMap } from "./types";
+
+/**
+ * Catálogo / configuración del control. NO es mock: son las equivalencias
+ * reales que hacen posible el cruce (sucursales de Raven y recetas de producto).
+ * Se editan desde la pantalla Mapeos; acá vive el valor inicial.
+ */
 
 export const SUCURSALES: Sucursal[] = [
   { ravenCode: "1007", canonico: "DS-FLO", nombre: "Flores", brand: "desembarco", activa: true },
@@ -26,7 +32,7 @@ export const PRODUCTO_MAP: ProductoMap[] = [
 
 /** Insumos que el CDP entrega. Si un insumo no tiene regla en PRODUCTO_MAP,
  *  sus pedidos no se pueden contrastar contra ventas (genera alerta). */
-export const PRODUCTS: { code: string; name: string; unit: string; brand: BrandId }[] = [
+export const PRODUCTS: { code: string; name: string; unit: string; brand: import("./types").BrandId }[] = [
   { code: "050027", name: "Bolas Blend 100g", unit: "un", brand: "desembarco" },
   { code: "040022", name: "Medallón Tuki 80g", unit: "un", brand: "tasty" },
   { code: "080002", name: "Panceta feteada", unit: "g", brand: "tasty" },
@@ -35,13 +41,7 @@ export const PRODUCTS: { code: string; name: string; unit: string; brand: BrandI
   { code: "060015", name: "Pan brioche", unit: "un", brand: "tasty" },
 ];
 
-// PRNG determinístico para mock estable entre renders
-function rng(seed: number) {
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return () => (s = (s * 16807) % 2147483647) / 2147483647;
-}
-
+/** Devuelve las últimas n fechas (incluida hoy) en formato ISO AAAA-MM-DD. */
 export function recentDates(n: number): string[] {
   const out: string[] = [];
   const base = new Date();
@@ -57,52 +57,21 @@ export function recentDates(n: number): string[] {
   return out;
 }
 
-/**
- * Genera el cruce mock. La venta equivalente se DERIVA de ventas por SKU x factor
- * (mismo modelo que con datos reales), así el desglose del detalle cuadra con el total.
- * El pedido al CDP se genera con un desvío sobre esa venta equivalente.
- */
-export function buildCruce(): CruceRow[] {
-  const rows: CruceRow[] = [];
-  const dates = recentDates(7);
-  let seed = 7;
-  for (const p of PRODUCTS) {
-    const reglas = PRODUCTO_MAP.filter((m) => m.codigoCdp === p.code);
-    if (reglas.length === 0) continue;
-    // Solo sucursales mapeadas: una sin código canónico no puede cruzarse
-    // (queda como punto ciego y se reporta aparte en Alertas).
-    const branches = SUCURSALES.filter((s) => s.brand === p.brand && s.activa && s.canonico);
-    for (const s of branches) {
-      for (const fecha of dates) {
-        const r = rng(seed++);
-        // ventas mock por SKO de cada regla -> componentes
-        const componentes = reglas.map((m) => {
-          const vendidas = 40 + Math.floor(r() * 320);
-          return {
-            sku: m.skuVenta,
-            nombre: m.skuNombre,
-            vendidas,
-            factor: m.factor,
-            subtotal: vendidas * m.factor,
-          };
-        });
-        const ventaEquiv = componentes.reduce((a, c) => a + c.subtotal, 0);
-        // pedido = venta equivalente +/- desvío (sobre o sub-pedido)
-        const drift = (r() - 0.5) * 0.5; // -25%..+25%
-        const pedidoCdp = Math.max(1, Math.round(ventaEquiv * (1 + drift)));
-        rows.push({
-          fecha,
-          brand: p.brand,
-          sucursal: s.nombre,
-          codigoCdp: p.code,
-          producto: p.name,
-          pedidoCdp,
-          ventaEquiv,
-          unidad: p.unit,
-          componentes,
-        });
-      }
-    }
-  }
-  return rows;
-}
+/** Mapa rápido ravenCode -> sucursal, para traducir lo que devuelve Raven. */
+export const sucursalPorRaven = (ravenCode: string) =>
+  SUCURSALES.find((s) => s.ravenCode === ravenCode);
+
+/** Unidad de un insumo del CDP (un / g …). */
+export const unidadDe = (code: string) =>
+  PRODUCTS.find((p) => p.code === code)?.unit ?? "un";
+
+/** Nombre legible de un insumo del CDP. */
+export const nombreInsumo = (code: string) =>
+  PRODUCTS.find((p) => p.code === code)?.name ??
+  PRODUCTO_MAP.find((m) => m.codigoCdp === code)?.insumoNombre ??
+  code;
+
+/** Marca a la que pertenece un insumo del CDP. */
+export const brandDeInsumo = (code: string) =>
+  PRODUCTS.find((p) => p.code === code)?.brand ??
+  SUCURSALES[0].brand;

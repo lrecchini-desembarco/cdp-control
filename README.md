@@ -8,8 +8,11 @@ Sin autenticación: pensado para la etapa de desarrollo.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+cp .env.example .env.local   # producción: DATA_SOURCE=live (Raven + Tango)
+npm run dev                  # http://localhost:3000
 ```
+
+Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 
 ## Pantallas
 
@@ -26,10 +29,20 @@ npm run dev      # http://localhost:3000
 
 ## Datos
 
-- **Raven**: real. El componente pega a `/api/raven`, un route handler que proxea
-  `https://api.ravenfood.app/data/items/:code?date=:fecha` (evita CORS y valida los parámetros).
-- **Cruce y mapeos**: mock realista en `lib/mock.ts` (sucursales y productos reales).
-  Acá es donde se enchufan después las planillas / el motor de cruce de Apps Script.
+El cruce combina **dos fuentes reales** (ver [`docs/datos.md`](docs/datos.md)):
+
+- **Pedidos al CDP → Raven** (`lib/sources/raven.ts`): pega a `/api/raven` /
+  `https://api.ravenfood.app/data/items/:code?date=` por insumo y fecha, y traduce
+  `branch_code → código canónico`.
+- **Ventas por SKU → Tango / SQL Server** (`lib/sources/tango.ts`): lee la vista
+  read-only `dbo.vw_VentasInsumoDiaria` (template en `lib/sources/tango.queries.sql`).
+
+El motor `construirCruce()` (`lib/cruce.ts`) las combina en `CruceRow[]`, expuesto por
+`/api/cruce`; las alertas se calculan en `/api/alertas`. La selección de fuente es la
+variable `DATA_SOURCE` (`live` por defecto, `mock` para desarrollo).
+
+**Para quedar 100% productivo falta** (infra del cliente): `RAVEN_TOKEN`, la vista de
+Tango creada + usuario solo-lectura, y las credenciales `TANGO_*`. Detalle en `docs/datos.md`.
 
 ## Heurísticas de Nielsen aplicadas
 
@@ -44,15 +57,17 @@ npm run dev      # http://localhost:3000
 ## Estructura
 
 ```
-app/            páginas + route handler /api/raven
-components/ui   primitivos (Card, Badge, Button, EmptyState, ErrorState…)
+app/              páginas + route handlers (/api/raven · /api/cruce · /api/alertas)
+components/ui     primitivos (Card, Badge, Button, EmptyState, ErrorState…)
 components/views  AlertasView · CruceView · RavenExplorer · MapeosView · DetalleModal
 components/layout Sidebar · Topbar
-lib/            tipos, marcas/format, mock, motor de alertas (alertas.ts)
-docs/           documentación funcional (alertas.md)
+lib/              types · brands (format) · catalogo (config real) · cruce (motor) · alertas
+lib/sources/      adapters de datos: raven (pedidos) · tango/mssql (ventas) · mock · index (selector)
+docs/             documentación funcional (datos.md · alertas.md)
 ```
 
 ## Próximo paso
 
-Reemplazar `lib/mock.ts` por la lectura real (planilla `Raven_In` + `Producto_Map` del ecosistema
-Apps Script, o un endpoint propio). La forma de los datos ya está definida en `lib/types.ts`.
+Conectar la infraestructura real (ver `docs/datos.md`): `RAVEN_TOKEN`, la vista
+`vw_VentasInsumoDiaria` en Tango y las credenciales `TANGO_*`. El código ya está
+cableado: es completar `.env.local` con `DATA_SOURCE=live`.

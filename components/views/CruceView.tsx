@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { buildCruce } from "@/lib/mock";
 import { BRANDS, brandById, fmtInt, fmtPct, severidad } from "@/lib/brands";
 import type { BrandId, CruceRow } from "@/lib/types";
-import { Badge, Card, EmptyState, Field, inputClass } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, ErrorState, Field, inputClass, Skeleton } from "@/components/ui/primitives";
 import DetalleModal from "@/components/views/DetalleModal";
 
 type RowDev = CruceRow & { dev: number; pct: number };
@@ -34,29 +33,53 @@ function DeviationBar({ pct }: { pct: number }) {
   );
 }
 
+type Status = "loading" | "ok" | "error";
+
 export default function CruceView() {
-  const all = useMemo(() => buildCruce(), []);
-  const dates = useMemo(
-    () => Array.from(new Set(all.map((r) => r.fecha))).sort().reverse(),
-    [all]
-  );
+  const [all, setAll] = useState<CruceRow[]>([]);
+  const [status, setStatus] = useState<Status>("loading");
+  const [errMsg, setErrMsg] = useState("");
   const [brand, setBrand] = useState<BrandId | "all">("all");
-  const [fecha, setFecha] = useState<string>(dates[0]);
+  const [fecha, setFecha] = useState<string>("");
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("desvio");
   const [detalle, setDetalle] = useState<RowDev | null>(null);
 
-  // Deep-link desde Alertas: /cruce?fecha=2026-06-29&q=Flores&brand=tasty
+  const dates = useMemo(
+    () => Array.from(new Set(all.map((r) => r.fecha))).sort().reverse(),
+    [all]
+  );
+
+  // Trae el cruce real (Raven + Tango) desde la API.
+  async function cargar() {
+    setStatus("loading");
+    try {
+      const r = await fetch("/api/cruce");
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error ?? "No se pudo construir el cruce.");
+      setAll(j.data as CruceRow[]);
+      setStatus("ok");
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : "Error desconocido.");
+      setStatus("error");
+    }
+  }
   useEffect(() => {
+    cargar();
+  }, []);
+
+  // Al llegar los datos: fija la fecha (deep-link ?fecha= o la más reciente)
+  // y aplica los filtros de deep-link desde Alertas (?q=, ?brand=).
+  useEffect(() => {
+    if (status !== "ok" || dates.length === 0 || fecha) return;
     const sp = new URLSearchParams(window.location.search);
     const f = sp.get("fecha");
-    if (f && dates.includes(f)) setFecha(f);
+    setFecha(f && dates.includes(f) ? f : dates[0]);
     const b = sp.get("brand");
     if (b) setBrand(b as BrandId | "all");
     const query = sp.get("q");
     if (query) setQ(query);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [status, dates, fecha]);
 
   const rows = useMemo(() => {
     let r: CruceRow[] = all.filter((x) => x.fecha === fecha);
@@ -167,11 +190,21 @@ export default function CruceView() {
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
           <span className="text-2xs font-medium uppercase tracking-wide text-faint">
-            {rows.length} líneas · tocá una para ver el detalle
+            {status === "ok" ? `${rows.length} líneas · tocá una para ver el detalle` : "Cargando…"}
           </span>
           <Legend />
         </div>
-        {rows.length === 0 ? (
+        {status === "loading" ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
+          </div>
+        ) : status === "error" ? (
+          <div className="p-4">
+            <ErrorState msg={errMsg} onRetry={cargar} />
+          </div>
+        ) : rows.length === 0 ? (
           <div className="p-6">
             <EmptyState
               title="Sin datos para este filtro"

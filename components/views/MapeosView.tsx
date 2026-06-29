@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SUCURSALES, PRODUCTO_MAP } from "@/lib/mock";
+import { SUCURSALES, PRODUCTO_MAP } from "@/lib/catalogo";
 import { BRANDS, brandById } from "@/lib/brands";
 import type { ProductoMap, Sucursal } from "@/lib/types";
 import { Badge, Button, Card, inputClass } from "@/components/ui/primitives";

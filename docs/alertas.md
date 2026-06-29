@@ -68,10 +68,16 @@ Cada alerta lleva un `id` estable (ej. `quiebre:Pilar:040022:2026-06-29`), pensa
 para que más adelante se puedan **silenciar/snoozear** o deduplicar sin tocar la
 lógica de detección.
 
-## Estado actual y próximos pasos
+## Origen de los datos
 
-- Hoy las alertas se calculan sobre el **mock** (`buildCruce`). Al conectar pedidos
-  reales (ERP) y ventas reales (Raven), las mismas reglas operan sin cambios.
-- Próximos candidatos: **notificación** (mail/Slack) al superar umbral,
-  **silenciar** alertas resueltas, **valorizar en $** para priorizar por plata
-  expuesta, y **stock teórico acumulado** en vez de comparar día a día.
+Las alertas se calculan en `/api/alertas` sobre el cruce real que arma
+`getCruce()` (pedidos de **Raven** + ventas de **Tango**, ver [`datos.md`](datos.md)).
+La detección (`detectarAlertas(cruce)`) es pura y no depende de la fuente: con
+`DATA_SOURCE=mock` opera igual sobre datos de desarrollo.
+
+## Próximos pasos
+
+- **Notificación** (mail/Slack) al superar umbral, en vez de entrar a mirar.
+- **Silenciar / snooze** de alertas resueltas (los `id` ya son estables).
+- **Valorizar en $** para priorizar por plata expuesta.
+- **Stock teórico acumulado** en vez de comparar día a día.
