@@ -47,9 +47,17 @@ export default async function Page() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-xl font-semibold text-ink">Resumen</h1>
-        <p className="mt-0.5 text-sm text-muted">Estado de la operación CDP al {ultimaFecha}.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-xl font-semibold text-ink">Resumen</h1>
+          <p className="mt-0.5 text-sm text-muted">Estado de la operación CDP al {ultimaFecha}.</p>
+        </div>
+        <Link
+          href="/guia"
+          className="shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-action/40 hover:text-action"
+        >
+          ¿Qué puedo hacer? →
+        </Link>
       </div>
 
       {fuenteError && (

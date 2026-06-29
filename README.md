@@ -16,6 +16,7 @@ Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 
 ## Pantallas
 
+- **¿Qué puedo hacer?** (`/guia`) — guía de orientación: qué se puede hacer desde la app y cómo, paso a paso, con accesos directos.
 - **Resumen** (`/`) — estado del último día: pedido al CDP, venta equivalente, desvío neto y líneas a revisar.
   Arriba, una banda con el estado de las alertas.
 - **Alertas** (`/alertas`) — centro de monitoreo: detecta quiebres, sobre-pedidos, desvíos recurrentes y

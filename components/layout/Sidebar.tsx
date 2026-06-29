@@ -11,6 +11,7 @@ const NAV = [
   { href: "/raven", label: "Consultar Raven", icon: "↧" },
   { href: "/mapeos", label: "Mapeos", icon: "⊞" },
   { href: "/catalogo", label: "Control de catálogo", icon: "▤" },
+  { href: "/guia", label: "¿Qué puedo hacer?", icon: "?" },
 ];
 
 export default function Sidebar() {
