@@ -28,14 +28,22 @@ export default function ReviewPublic() {
   const [marca, setMarca] = useState<string | null>(null);
 
   useEffect(() => {
-    const m = new URLSearchParams(window.location.search).get("m");
+    const sp = new URLSearchParams(window.location.search);
+    const m = sp.get("m");
+    const preLocal = sp.get("l"); // QR por local: arranca directo a calificar
     setMarca(m);
     fetch("/api/locales")
       .then((r) => r.json())
       .then((j) => {
         if (!j.ok) return;
-        const list = m ? (j.locales as Local[]).filter((l) => (l.marca ?? "") === m) : j.locales;
+        const all = j.locales as Local[];
+        const list = m ? all.filter((l) => (l.marca ?? "") === m) : all;
         setLocales(list);
+        if (preLocal && all.some((l) => l.nombre === preLocal)) {
+          setLocal(preLocal);
+          setQ(preLocal);
+          setPaso("calificar");
+        }
       })
       .catch(() => {});
   }, []);

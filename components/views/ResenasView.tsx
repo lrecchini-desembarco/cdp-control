@@ -8,6 +8,7 @@ import { Badge, Button, Card, EmptyState, inputClass } from "@/components/ui/pri
 interface Local {
   nombre: string;
   googleUrl?: string;
+  marca?: string;
 }
 interface Review {
   id: string;
@@ -27,19 +28,34 @@ export default function ResenasView() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [resumen, setResumen] = useState<Resumen>({ total: 0, promedio: 0, porEstrella: {} });
   const [qr, setQr] = useState("");
-  const [qrMarca, setQrMarca] = useState("general");
+  const [qrSel, setQrSel] = useState("general"); // "general" | "marca:<slug>" | "local:<nombre>"
   const [origin, setOrigin] = useState("");
   const [nuevo, setNuevo] = useState({ nombre: "", googleUrl: "", marca: "desembarco" });
   const [filtro, setFiltro] = useState("");
 
-  // Opciones de QR. Agregar una marca nueva acá la suma al selector y al filtro.
-  const QR_OPCIONES = [
-    { slug: "general", label: "General (todas)", titulo: "DS Group" },
-    { slug: "desembarco", label: "El Desembarco", titulo: "El Desembarco" },
-    { slug: "tasty", label: "Mr Tasty", titulo: "Mr Tasty" },
-  ];
-  const opcion = QR_OPCIONES.find((o) => o.slug === qrMarca) ?? QR_OPCIONES[0];
-  const reviewUrl = origin ? (qrMarca === "general" ? `${origin}/review` : `${origin}/review?m=${qrMarca}`) : "";
+  const MARCA_LABEL: Record<string, string> = {
+    desembarco: "El Desembarco",
+    tasty: "Mr Tasty",
+    mila: "Mila & Go",
+    otros: "Otros",
+  };
+  // Marcas con locales cargados (se actualiza solo al sumar locales de otra marca).
+  const marcasPresentes = Array.from(new Set(locales.map((l) => l.marca || "otros")));
+
+  const targetUrl = (sel: string) => {
+    if (!origin) return "";
+    if (sel.startsWith("marca:")) return `${origin}/review?m=${sel.slice(6)}`;
+    if (sel.startsWith("local:")) return `${origin}/review?l=${encodeURIComponent(sel.slice(6))}`;
+    return `${origin}/review`;
+  };
+  const targetTitulo = (sel: string) => {
+    if (sel.startsWith("marca:")) return MARCA_LABEL[sel.slice(6)] ?? "DS Group";
+    if (sel.startsWith("local:")) return sel.slice(6);
+    return "DS Group";
+  };
+  const reviewUrl = targetUrl(qrSel);
+  const posterTitulo = targetTitulo(qrSel);
+  const qrFile = "qr-resenas-" + qrSel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
 
   function cargarLocales() {
     fetch("/api/locales")
@@ -102,26 +118,23 @@ export default function ResenasView() {
         </p>
       </div>
 
-      {/* Generador de QR por marca */}
+      {/* Generador de QR: general, por marca y por local */}
       <Card className="no-print p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-2xs font-medium uppercase tracking-wide text-faint">QR para</span>
-          {QR_OPCIONES.map((o) => (
-            <button
-              key={o.slug}
-              onClick={() => setQrMarca(o.slug)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                qrMarca === o.slug ? "border-action bg-action/10 text-action" : "border-line text-muted hover:bg-ink/5"
-              }`}
-            >
-              {o.label}
-            </button>
+          <Chip active={qrSel === "general"} onClick={() => setQrSel("general")}>
+            General (todas)
+          </Chip>
+          {marcasPresentes.map((m) => (
+            <Chip key={m} active={qrSel === `marca:${m}`} onClick={() => setQrSel(`marca:${m}`)}>
+              {MARCA_LABEL[m] ?? m}
+            </Chip>
           ))}
           <div className="ml-auto flex gap-2">
             {qr && (
               <a
                 href={qr}
-                download={`qr-resenas-${qrMarca}.png`}
+                download={`${qrFile}.png`}
                 className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
               >
                 Descargar PNG
@@ -140,13 +153,32 @@ export default function ResenasView() {
             </a>
           </div>
         </div>
+        {/* QR por local puntual */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+          <span className="mr-1 text-2xs font-medium uppercase tracking-wide text-faint">o por local</span>
+          <select
+            className={`${inputClass} max-w-[280px] py-1`}
+            value={qrSel.startsWith("local:") ? qrSel.slice(6) : ""}
+            onChange={(e) => e.target.value && setQrSel(`local:${e.target.value}`)}
+          >
+            <option value="">— Elegí un local puntual —</option>
+            {locales.map((l) => (
+              <option key={l.nombre} value={l.nombre}>
+                {l.nombre}
+              </option>
+            ))}
+          </select>
+          {qrSel.startsWith("local:") && (
+            <span className="text-2xs text-action">QR directo a {qrSel.slice(6)} (sin elegir local)</span>
+          )}
+        </div>
         <p className="mt-2 break-all font-mono text-2xs text-faint">{reviewUrl}</p>
       </Card>
 
       {/* Póster imprimible (esto es lo único que sale en la impresión) */}
       <div id="print-area" className="flex justify-center">
         <div className="poster w-full max-w-sm rounded-card border border-line bg-surface px-8 py-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-action">{opcion.titulo}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-action">{posterTitulo}</p>
           <h2 className="mt-4 font-display text-3xl font-bold leading-tight text-ink">
             ¿Cómo estuvo tu experiencia?
           </h2>
@@ -316,6 +348,19 @@ function LocalRow({
         Quitar
       </button>
     </div>
+  );
+}
+
+function Chip({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        active ? "border-action bg-action/10 text-action" : "border-line text-muted hover:bg-ink/5"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
