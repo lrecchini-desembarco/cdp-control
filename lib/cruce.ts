@@ -84,6 +84,6 @@ export function rangoPorDefecto(): RangoQuery {
  */
 export async function getCruce(q: RangoQuery = rangoPorDefecto()): Promise<CruceRow[]> {
   const { pedidos, ventas } = getSources();
-  const [p, v] = await Promise.all([pedidos.getPedidos(q), ventas.getVentas(q)]);
-  return construirCruce(p, v, getMapeos());
+  const [p, v, mapeos] = await Promise.all([pedidos.getPedidos(q), ventas.getVentas(q), getMapeos()]);
+  return construirCruce(p, v, mapeos);
 }

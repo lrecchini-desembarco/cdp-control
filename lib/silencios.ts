@@ -13,8 +13,8 @@ export interface Silencio {
 
 type SilenciosMap = Record<string, Silencio>;
 
-function todasVigentes(): SilenciosMap {
-  const map = readStore<SilenciosMap>("silencios", {});
+async function todasVigentes(): Promise<SilenciosMap> {
+  const map = await readStore<SilenciosMap>("silencios", {});
   const hoy = new Date().toISOString().slice(0, 10);
   // Limpia los vencidos al leer (así no se acumulan).
   let cambio = false;
@@ -25,22 +25,22 @@ function todasVigentes(): SilenciosMap {
       cambio = true;
     }
   }
-  if (cambio) writeStore("silencios", map);
+  if (cambio) await writeStore("silencios", map);
   return map;
 }
 
 /** Set de ids actualmente silenciados (vigentes). */
-export function idsSilenciados(): Set<string> {
-  return new Set(Object.keys(todasVigentes()));
+export async function idsSilenciados(): Promise<Set<string>> {
+  return new Set(Object.keys(await todasVigentes()));
 }
 
-export function listarSilencios(): Silencio[] {
-  return Object.values(todasVigentes());
+export async function listarSilencios(): Promise<Silencio[]> {
+  return Object.values(await todasVigentes());
 }
 
 /** Silencia una alerta por N días (o indefinido si dias = null). */
-export function silenciar(id: string, dias: number | null, motivo?: string): Silencio {
-  const map = todasVigentes();
+export async function silenciar(id: string, dias: number | null, motivo?: string): Promise<Silencio> {
+  const map = await todasVigentes();
   let hasta: string | null = null;
   if (dias != null) {
     const d = new Date();
@@ -48,14 +48,14 @@ export function silenciar(id: string, dias: number | null, motivo?: string): Sil
     hasta = d.toISOString().slice(0, 10);
   }
   map[id] = { id, hasta, motivo };
-  writeStore("silencios", map);
+  await writeStore("silencios", map);
   return map[id];
 }
 
-export function quitarSilencio(id: string): void {
-  const map = todasVigentes();
+export async function quitarSilencio(id: string): Promise<void> {
+  const map = await todasVigentes();
   if (map[id]) {
     delete map[id];
-    writeStore("silencios", map);
+    await writeStore("silencios", map);
   }
 }

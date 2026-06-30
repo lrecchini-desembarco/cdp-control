@@ -1,25 +1,44 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { existsSync } from "fs";
 import { join } from "path";
 
 /**
- * Persistencia simple en archivos JSON (server-only). Es la "costura" de
- * persistencia: hoy escribe en `.data/` (sirve en local y en un server con disco
- * persistente). Para serverless (Vercel) se reemplaza esta única pieza por un
- * KV/DB (Vercel KV, Postgres, etc.) sin tocar el resto de la app.
+ * Persistencia (server-only). Dos backends, misma interfaz async:
+ *   - Vercel KV  : si está la env KV_REST_API_URL (producción / serverless).
+ *   - Archivos   : .data/*.json (local / server con disco persistente).
+ * Cambiar de backend no toca el resto de la app.
  */
 
 const DIR = join(process.cwd(), ".data");
+const usaKV = () => Boolean(process.env.KV_REST_API_URL);
 
-export function readStore<T>(name: string, fallback: T): T {
+// import perezoso: @vercel/kv solo se carga si hay KV configurado.
+function getKv() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return (require("@vercel/kv") as typeof import("@vercel/kv")).kv;
+}
+
+export async function readStore<T>(name: string, fallback: T): Promise<T> {
+  if (usaKV()) {
+    try {
+      const v = await getKv().get<T>(`cdp:${name}`);
+      return v ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
   try {
-    const raw = readFileSync(join(DIR, `${name}.json`), "utf8");
-    return JSON.parse(raw) as T;
+    return JSON.parse(await readFile(join(DIR, `${name}.json`), "utf8")) as T;
   } catch {
     return fallback;
   }
 }
 
-export function writeStore<T>(name: string, value: T): void {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true });
-  writeFileSync(join(DIR, `${name}.json`), JSON.stringify(value, null, 2), "utf8");
+export async function writeStore<T>(name: string, value: T): Promise<void> {
+  if (usaKV()) {
+    await getKv().set(`cdp:${name}`, value as any);
+    return;
+  }
+  if (!existsSync(DIR)) await mkdir(DIR, { recursive: true });
+  await writeFile(join(DIR, `${name}.json`), JSON.stringify(value, null, 2), "utf8");
 }

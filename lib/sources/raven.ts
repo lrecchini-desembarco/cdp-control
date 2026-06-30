@@ -40,7 +40,7 @@ export const ravenPedidosSource: PedidosSource = {
     const fechas = rangoFechas(q.desde, q.hasta);
     const pedidos: PedidoCdp[] = [];
     // Mapeo branch_code -> sucursal, con los mapeos efectivos (incluye lo guardado).
-    const sucPorRaven = new Map(getMapeos().sucursales.map((s) => [s.ravenCode, s]));
+    const sucPorRaven = new Map((await getMapeos()).sucursales.map((s) => [s.ravenCode, s]));
 
     // Una request por insumo y fecha. Se lanzan en paralelo y se toleran fallos
     // puntuales (un 404 = sin pedidos; un insumo nuevo no rompe el resto).

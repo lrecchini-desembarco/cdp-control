@@ -12,7 +12,7 @@ const GENERICA = process.env.APP_PASSWORD ?? "cdp2026";
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = (await req.json()) as { email?: string; password?: string };
-    const u = email ? findUsuario(email) : undefined;
+    const u = email ? await findUsuario(email) : undefined;
     // Si el usuario tiene clave propia se valida contra ella; si no, la genérica.
     const valida = u ? (u.pass ? verifyPassword(password ?? "", u.pass) : password === GENERICA) : false;
     if (!u || !valida) {

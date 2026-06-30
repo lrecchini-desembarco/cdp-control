@@ -29,9 +29,7 @@ export async function getVentasPorTurno(
   filtros?: { sucursal?: string; marca?: string }
 ): Promise<VentasPorTurno> {
   const { ventas } = getSources();
-  const data = await ventas.getVentas(q);
-
-  const mapeos = getMapeos();
+  const [data, mapeos] = await Promise.all([ventas.getVentas(q), getMapeos()]);
   const reglaPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
   const sucursales = mapeos.sucursales
     .filter((s) => s.activa && s.canonico)

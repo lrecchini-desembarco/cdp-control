@@ -23,7 +23,7 @@ export default async function Page() {
   } catch (e) {
     fuenteError = e instanceof Error ? e.message : "No se pudo leer la fuente de datos.";
   }
-  const mapeos = getMapeos();
+  const mapeos = await getMapeos();
   const alertas = resumenAlertas(detectarAlertas(cruce, mapeos));
 
   let catalogo: ResumenCatalogo = CAT_VACIO;

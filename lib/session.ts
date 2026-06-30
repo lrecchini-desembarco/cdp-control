@@ -12,9 +12,9 @@ export interface Sesion {
  * Sesión actual (server-only). La cookie guarda el email; el rol se deriva del
  * store de usuarios (fuente de verdad), así no se puede escalar tocando la cookie.
  */
-export function getSesion(): Sesion | null {
+export async function getSesion(): Promise<Sesion | null> {
   const email = cookies().get(COOKIE)?.value;
   if (!email) return null;
-  const u = findUsuario(email);
+  const u = await findUsuario(email);
   return u ? { email: u.email, rol: u.rol } : null;
 }

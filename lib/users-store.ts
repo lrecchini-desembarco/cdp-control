@@ -19,36 +19,37 @@ const SEED: Usuario[] = [
 
 const norm = (e: string) => e.trim().toLowerCase();
 
-export function getUsuarios(): Usuario[] {
-  const saved = readStore<Usuario[] | null>("usuarios", null);
+export async function getUsuarios(): Promise<Usuario[]> {
+  const saved = await readStore<Usuario[] | null>("usuarios", null);
   const base = Array.isArray(saved) && saved.length ? saved : SEED;
   // Garantía: siempre tiene que existir al menos un admin.
   return base.some((u) => u.rol === "admin") ? base : [...base, SEED[0]];
 }
 
-export function findUsuario(email: string): Usuario | undefined {
+export async function findUsuario(email: string): Promise<Usuario | undefined> {
   const e = norm(email);
-  return getUsuarios().find((u) => norm(u.email) === e);
+  return (await getUsuarios()).find((u) => norm(u.email) === e);
 }
 
-export function addUsuario(email: string, rol: Rol, password?: string): Usuario[] {
+export async function addUsuario(email: string, rol: Rol, password?: string): Promise<Usuario[]> {
   if (!email.includes("@") || !esRol(rol)) throw new Error("Email o rol inválido.");
   const e = norm(email);
-  const previo = getUsuarios().find((u) => norm(u.email) === e);
-  const users = getUsuarios().filter((u) => norm(u.email) !== e);
+  const actuales = await getUsuarios();
+  const previo = actuales.find((u) => norm(u.email) === e);
+  const users = actuales.filter((u) => norm(u.email) !== e);
   // Clave nueva si la mandan; si no, conserva la que tenía (al editar el rol).
   const pass = password ? hashPassword(password) : previo?.pass;
   users.push({ email: norm(email), rol, ...(pass ? { pass } : {}) });
-  writeStore("usuarios", users);
+  await writeStore("usuarios", users);
   return users;
 }
 
-export function removeUsuario(email: string): Usuario[] {
+export async function removeUsuario(email: string): Promise<Usuario[]> {
   const e = norm(email);
-  let users = getUsuarios().filter((u) => norm(u.email) !== e);
+  const users = (await getUsuarios()).filter((u) => norm(u.email) !== e);
   if (!users.some((u) => u.rol === "admin")) {
     throw new Error("No se puede quedar sin ningún administrador.");
   }
-  writeStore("usuarios", users);
+  await writeStore("usuarios", users);
   return users;
 }

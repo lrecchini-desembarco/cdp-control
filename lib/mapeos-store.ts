@@ -15,19 +15,19 @@ export interface MapeosData {
 
 const DEFAULTS = (): MapeosData => ({ sucursales: SUCURSALES, productoMap: PRODUCTO_MAP });
 
-export function getMapeos(): MapeosData {
-  const saved = readStore<MapeosData | null>("mapeos", null);
+export async function getMapeos(): Promise<MapeosData> {
+  const saved = await readStore<MapeosData | null>("mapeos", null);
   if (!saved || !Array.isArray(saved.sucursales) || !Array.isArray(saved.productoMap)) {
     return DEFAULTS();
   }
   return saved;
 }
 
-export function saveMapeos(data: MapeosData): MapeosData {
+export async function saveMapeos(data: MapeosData): Promise<MapeosData> {
   const limpio: MapeosData = {
     sucursales: data.sucursales ?? [],
     productoMap: data.productoMap ?? [],
   };
-  writeStore("mapeos", limpio);
+  await writeStore("mapeos", limpio);
   return limpio;
 }

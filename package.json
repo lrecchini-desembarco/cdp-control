@@ -10,6 +10,7 @@
     "test:tango": "node scripts/test-tango.mjs"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "mssql": "^11.0.1",
     "next": "14.2.5",
     "qrcode": "^1.5.4",

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/silencios -> lista de silencios vigentes
 export async function GET() {
-  return NextResponse.json({ ok: true, silencios: listarSilencios() });
+  return NextResponse.json({ ok: true, silencios: await listarSilencios() });
 }
 
 // POST /api/silencios { id, dias?, motivo? } -> silencia (dias null = indefinido)
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       motivo?: string;
     };
     if (!id) return NextResponse.json({ ok: false, error: "Falta id." }, { status: 400 });
-    return NextResponse.json({ ok: true, silencio: silenciar(id, dias ?? null, motivo) });
+    return NextResponse.json({ ok: true, silencio: await silenciar(id, dias ?? null, motivo) });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "No se pudo silenciar." },
@@ -30,6 +30,6 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ ok: false, error: "Falta id." }, { status: 400 });
-  quitarSilencio(id);
+  await quitarSilencio(id);
   return NextResponse.json({ ok: true });
 }

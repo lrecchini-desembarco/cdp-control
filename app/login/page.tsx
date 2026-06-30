@@ -5,8 +5,8 @@ import LoginForm from "@/components/views/LoginForm";
 
 export const dynamic = "force-dynamic";
 
-export default function Page() {
-  const s = getSesion();
+export default async function Page() {
+  const s = await getSesion();
   if (s) redirect(homeDe(s.rol));
   return <LoginForm />;
 }

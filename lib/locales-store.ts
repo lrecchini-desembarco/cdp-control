@@ -38,33 +38,34 @@ function normalizar(raw: unknown): Local[] | null {
   });
 }
 
-export function getLocales(): Local[] {
-  const base = normalizar(readStore<unknown>("locales", null)) ?? semilla();
+export async function getLocales(): Promise<Local[]> {
+  const base = normalizar(await readStore<unknown>("locales", null)) ?? semilla();
   return [...base].sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
-export function findLocal(nombre: string): Local | undefined {
+export async function findLocal(nombre: string): Promise<Local | undefined> {
   const n = nombre.trim().toLowerCase();
-  return getLocales().find((l) => l.nombre.toLowerCase() === n);
+  return (await getLocales()).find((l) => l.nombre.toLowerCase() === n);
 }
 
-export function upsertLocal(nombre: string, googleUrl?: string, marca?: MarcaSlug): Local[] {
+export async function upsertLocal(nombre: string, googleUrl?: string, marca?: MarcaSlug): Promise<Local[]> {
   const n = nombre.trim();
   if (!n) throw new Error("Nombre vacío.");
-  const previo = findLocal(n);
-  const otros = getLocales().filter((l) => l.nombre.toLowerCase() !== n.toLowerCase());
+  const actuales = await getLocales();
+  const previo = actuales.find((l) => l.nombre.toLowerCase() === n.toLowerCase());
+  const otros = actuales.filter((l) => l.nombre.toLowerCase() !== n.toLowerCase());
   const local: Local = {
     nombre: n,
     googleUrl: googleUrl !== undefined ? googleUrl.trim() : previo?.googleUrl,
     marca: marca ?? previo?.marca ?? marcaDeNombre(n),
   };
   if (!local.googleUrl) delete local.googleUrl;
-  writeStore("locales", [...otros, local]);
+  await writeStore("locales", [...otros, local]);
   return getLocales();
 }
 
-export function removeLocal(nombre: string): Local[] {
-  const nuevos = getLocales().filter((l) => l.nombre.toLowerCase() !== nombre.trim().toLowerCase());
-  writeStore("locales", nuevos);
+export async function removeLocal(nombre: string): Promise<Local[]> {
+  const nuevos = (await getLocales()).filter((l) => l.nombre.toLowerCase() !== nombre.trim().toLowerCase());
+  await writeStore("locales", nuevos);
   return nuevos;
 }

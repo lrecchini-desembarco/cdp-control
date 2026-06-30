@@ -24,7 +24,7 @@ function fechasEnRango(q: RangoQuery): string[] {
 
 export const mockVentasSource: VentasSource = {
   async getVentas(q: RangoQuery): Promise<VentaSku[]> {
-    const { sucursales, productoMap } = getMapeos();
+    const { sucursales, productoMap } = await getMapeos();
     const mapeadas = sucursales.filter((s) => s.activa && s.canonico);
     const fechas = fechasEnRango(q);
     const out: VentaSku[] = [];
@@ -52,7 +52,7 @@ export const mockPedidosSource: PedidosSource = {
     // El pedido al CDP se deriva de la venta equivalente (ventas x factor) con
     // un desvío, para que el cruce muestre sub/sobre-pedidos realistas.
     const ventas = await mockVentasSource.getVentas(q);
-    const factorPorSku = new Map(getMapeos().productoMap.map((m) => [m.skuVenta, m]));
+    const factorPorSku = new Map((await getMapeos()).productoMap.map((m) => [m.skuVenta, m]));
 
     // Venta equivalente por (fecha, sucursal, codigoCdp)
     const equiv = new Map<string, { fecha: string; suc: string; code: string; v: number }>();

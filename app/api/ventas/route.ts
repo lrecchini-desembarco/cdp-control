@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/ventas?desde&hasta&sucursal&marca -> ventas por artículo y turno
 export async function GET(req: NextRequest) {
-  if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   const def = rangoPorDefecto();
   const desde = req.nextUrl.searchParams.get("desde") ?? def.desde;
   const hasta = req.nextUrl.searchParams.get("hasta") ?? def.hasta;

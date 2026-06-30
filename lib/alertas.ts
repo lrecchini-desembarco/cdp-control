@@ -176,8 +176,8 @@ export async function getAlertas(): Promise<{
   resumen: ResumenAlertas;
 }> {
   const cruce = await getCruce();
-  const todas = detectarAlertas(cruce, getMapeos());
-  const silenciados = idsSilenciados();
+  const todas = detectarAlertas(cruce, await getMapeos());
+  const silenciados = await idsSilenciados();
   const alertas = todas.filter((a) => !silenciados.has(a.id));
   const silenciadas = todas.filter((a) => silenciados.has(a.id));
   return { alertas, silenciadas, resumen: resumenAlertas(alertas) };

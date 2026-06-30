@@ -6,19 +6,19 @@ export const dynamic = "force-dynamic";
 
 // GET es PÚBLICO: el consumidor (sin login) necesita la lista de locales.
 export async function GET() {
-  return NextResponse.json({ ok: true, locales: getLocales() });
+  return NextResponse.json({ ok: true, locales: await getLocales() });
 }
 
 // Mutaciones: solo con sesión (admin/operaciones cargan locales y su link Google).
 export async function POST(req: NextRequest) {
-  if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   try {
     const { nombre, googleUrl, marca } = (await req.json()) as {
       nombre?: string;
       googleUrl?: string;
       marca?: "desembarco" | "tasty" | "mila" | "otros";
     };
-    const locales = upsertLocal(String(nombre ?? ""), googleUrl, marca);
+    const locales = await upsertLocal(String(nombre ?? ""), googleUrl, marca);
     return NextResponse.json({ ok: true, locales });
   } catch (e) {
     return NextResponse.json(
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!getSesion()) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
+  if (!(await getSesion())) return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   const nombre = req.nextUrl.searchParams.get("nombre");
   if (!nombre) return NextResponse.json({ ok: false, error: "Falta nombre." }, { status: 400 });
-  return NextResponse.json({ ok: true, locales: removeLocal(nombre) });
+  return NextResponse.json({ ok: true, locales: await removeLocal(nombre) });
 }

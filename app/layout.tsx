@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   description: "Comparativa de pedidos al CDP contra ventas de sucursal",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const sesion = getSesion();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sesion = await getSesion();
   const pathname = headers().get("x-pathname") ?? "";
   const ruta = pathname === "/" ? "/" : "/" + (pathname.split("/").filter(Boolean)[0] ?? "");
 

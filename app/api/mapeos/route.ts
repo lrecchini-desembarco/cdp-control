@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/mapeos -> mapeos efectivos (defaults + lo guardado)
 export async function GET() {
-  return NextResponse.json({ ok: true, ...getMapeos() });
+  return NextResponse.json({ ok: true, ...(await getMapeos()) });
 }
 
 // PUT /api/mapeos -> persiste sucursales + recetas editadas
@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest) {
     if (!Array.isArray(body.sucursales) || !Array.isArray(body.productoMap)) {
       return NextResponse.json({ ok: false, error: "Faltan sucursales o productoMap." }, { status: 400 });
     }
-    const guardado = saveMapeos({ sucursales: body.sucursales, productoMap: body.productoMap });
+    const guardado = await saveMapeos({ sucursales: body.sucursales, productoMap: body.productoMap });
     return NextResponse.json({ ok: true, ...guardado });
   } catch (e) {
     return NextResponse.json(

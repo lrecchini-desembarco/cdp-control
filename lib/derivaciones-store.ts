@@ -12,17 +12,17 @@ export interface Derivacion {
   local: string;
 }
 
-export function getDerivaciones(local?: string): Derivacion[] {
-  const todas = readStore<Derivacion[]>("derivaciones", []);
+export async function getDerivaciones(local?: string): Promise<Derivacion[]> {
+  const todas = await readStore<Derivacion[]>("derivaciones", []);
   const orden = [...todas].sort((a, b) => (a.creadoEn < b.creadoEn ? 1 : -1));
   return local ? orden.filter((d) => d.local === local) : orden;
 }
 
-export function addDerivacion(local: string): Derivacion {
-  const todas = readStore<Derivacion[]>("derivaciones", []);
+export async function addDerivacion(local: string): Promise<Derivacion> {
+  const todas = await readStore<Derivacion[]>("derivaciones", []);
   const nueva: Derivacion = { id: randomUUID(), creadoEn: new Date().toISOString(), local: String(local).trim() };
   todas.push(nueva);
-  writeStore("derivaciones", todas);
+  await writeStore("derivaciones", todas);
   return nueva;
 }
 
