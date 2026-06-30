@@ -122,6 +122,16 @@ export default function ResenasView() {
   const porSupervisor = useMemo(() => agrupar((l) => l.supervisor), [locales]);
   const porRegion = useMemo(() => agrupar((l) => l.region), [locales]);
 
+  // Control de locales (estado del maestro): lo accionable hoy, sin depender de Tango.
+  const control = useMemo(() => {
+    const norm = (s?: string) => (s ?? "ABIERTO").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+    return {
+      abiertosSinGoogle: locales.filter((l) => norm(l.estado) === "ABIERTO" && !l.googleUrl),
+      cerrados: locales.filter((l) => ["CERRADO", "EXCLUIDO"].includes(norm(l.estado))),
+      proximamente: locales.filter((l) => norm(l.estado) === "PROXIMAMENTE"),
+    };
+  }, [locales]);
+
   return (
     <div className="space-y-5">
       <div>
@@ -244,6 +254,32 @@ export default function ResenasView() {
         <RankingRepu titulo="Reputación por supervisor" filas={porSupervisor} />
         <RankingRepu titulo="Reputación por región" filas={porRegion} />
       </div>
+
+      {/* Control de locales (maestro) */}
+      <Card className="no-print overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2.5">
+          <span className="text-2xs font-medium uppercase tracking-wide text-faint">Control de locales</span>
+          <span className="text-2xs text-faint">
+            🔴 {control.abiertosSinGoogle.length} abiertos sin link de Google · 🟠 {control.cerrados.length} cerrados ·
+            🔵 {control.proximamente.length} próximamente
+          </span>
+        </div>
+        {control.abiertosSinGoogle.length === 0 ? (
+          <div className="p-4 text-2xs text-faint">
+            Todos los locales abiertos tienen link de Google cargado. 👌
+          </div>
+        ) : (
+          <div className="divide-y divide-line">
+            <p className="px-4 pt-3 text-2xs font-medium text-bad">Abiertos sin link de Google (no pueden recibir reseñas):</p>
+            {control.abiertosSinGoogle.slice(0, 30).map((l) => (
+              <div key={l.nombre} className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm text-ink">{l.nombre}</span>
+                <span className="text-2xs text-faint">{l.supervisor ?? "sin supervisor"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {/* Locales + link de Google */}
       <Card className="no-print overflow-hidden">
