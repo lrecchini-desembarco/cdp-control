@@ -54,6 +54,22 @@ Para que quede prendido siempre: instalarlo como servicio (`cloudflared service 
 > El bridge y el túnel tienen que quedar **corriendo 24/7** en esa máquina (o un
 > servidorcito de la red). Si se apagan, la app en Vercel deja de ver ventas.
 
+### Dejarlo 24/7 (sin consola abierta)
+
+**Bridge como tarea de Windows** (arranca al prender la máquina, se reinicia solo):
+```powershell
+# PowerShell COMO ADMINISTRADOR, en la carpeta del repo:
+powershell -ExecutionPolicy Bypass -File scripts\instalar-bridge-servicio.ps1
+```
+Desinstalar: `Unregister-ScheduledTask -TaskName "CDP Tango Bridge" -Confirm:$false`
+
+**Cloudflare Tunnel como servicio** (requiere tunnel con nombre, paso de arriba):
+```powershell
+cloudflared service install   # lo deja como servicio de Windows, arranca solo
+```
+(La opción rápida `--url ...trycloudflare.com` NO es para 24/7: es temporal y la
+URL cambia. Para producción usá el tunnel con nombre + dominio.)
+
 ## 3. En Vercel (Project → Settings → Environment Variables)
 
 ```
