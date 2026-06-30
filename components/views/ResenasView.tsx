@@ -9,6 +9,9 @@ interface Local {
   nombre: string;
   googleUrl?: string;
   marca?: string;
+  estado?: string;
+  supervisor?: string;
+  region?: string;
 }
 interface Derivaciones {
   total: number;
@@ -94,6 +97,30 @@ export default function ResenasView() {
   }
 
   const repuGoogle = useMemo(() => resumenGoogle(locales.map((l) => l.googleUrl)), [locales]);
+
+  // Reputación de Google agrupada por una dimensión (supervisor / región).
+  function agrupar(key: (l: Local) => string | undefined) {
+    const m = new Map<string, { sumW: number; reviews: number; locales: number }>();
+    for (const l of locales) {
+      const r = ratingDeUrl(l.googleUrl);
+      if (!r) continue;
+      const g = key(l);
+      if (!g) continue;
+      const acc = m.get(g) ?? { sumW: 0, reviews: 0, locales: 0 };
+      acc.sumW += r.score * r.reviews;
+      acc.reviews += r.reviews;
+      acc.locales += 1;
+      m.set(g, acc);
+    }
+    return Array.from(m, ([grupo, v]) => ({
+      grupo,
+      promedio: v.reviews ? v.sumW / v.reviews : 0,
+      reviews: v.reviews,
+      locales: v.locales,
+    })).sort((a, b) => b.reviews - a.reviews);
+  }
+  const porSupervisor = useMemo(() => agrupar((l) => l.supervisor), [locales]);
+  const porRegion = useMemo(() => agrupar((l) => l.region), [locales]);
 
   return (
     <div className="space-y-5">
@@ -212,6 +239,12 @@ export default function ResenasView() {
         <Kpi label="Derivaciones a Google" value={String(deriv.total)} />
       </div>
 
+      {/* Reputación por supervisor y por región */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <RankingRepu titulo="Reputación por supervisor" filas={porSupervisor} />
+        <RankingRepu titulo="Reputación por región" filas={porRegion} />
+      </div>
+
       {/* Locales + link de Google */}
       <Card className="no-print overflow-hidden">
         <div className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">
@@ -325,6 +358,40 @@ function LocalRow({
         Quitar
       </button>
     </div>
+  );
+}
+
+function RankingRepu({
+  titulo,
+  filas,
+}: {
+  titulo: string;
+  filas: { grupo: string; promedio: number; reviews: number; locales: number }[];
+}) {
+  return (
+    <Card className="no-print overflow-hidden">
+      <div className="border-b border-line px-4 py-2.5 text-2xs font-medium uppercase tracking-wide text-faint">
+        {titulo}
+      </div>
+      {filas.length === 0 ? (
+        <p className="px-4 py-4 text-2xs text-faint">Sin datos (faltan links de Google o el dato).</p>
+      ) : (
+        <div className="divide-y divide-line">
+          {filas.map((f) => {
+            const tono = f.promedio >= 4.3 ? "text-ok" : f.promedio >= 3.8 ? "text-warn" : "text-bad";
+            return (
+              <div key={f.grupo} className="flex items-center gap-3 px-4 py-2">
+                <span className="flex-1 truncate text-sm text-ink">{f.grupo}</span>
+                <span className="text-2xs text-faint">{f.locales} loc · {f.reviews.toLocaleString("es-AR")} reseñas</span>
+                <span className={`w-14 text-right font-mono text-sm font-semibold tnum ${tono}`}>
+                  {f.promedio.toFixed(2)}★
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
 

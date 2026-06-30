@@ -6,7 +6,9 @@ interface Local {
   nombre: string;
   googleUrl?: string;
   marca?: string;
+  estado?: string;
 }
+const abierto = (l: Local) => (l.estado ?? "ABIERTO").toUpperCase() === "ABIERTO";
 
 const MARCA_LABEL: Record<string, string> = {
   desembarco: "El Desembarco",
@@ -29,7 +31,7 @@ export default function ReviewPublic() {
       .then((r) => r.json())
       .then((j) => {
         if (!j.ok) return;
-        const all = j.locales as Local[];
+        const all = (j.locales as Local[]).filter(abierto); // solo locales operativos
         const list = m ? all.filter((l) => (l.marca ?? "") === m) : all;
         setLocales(list);
         if (preLocal && all.some((l) => l.nombre === preLocal)) {
