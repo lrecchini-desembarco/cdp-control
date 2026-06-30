@@ -1,37 +1,40 @@
 import type { CatalogoSource, PedidosSource, VentasSource } from "./types";
 
 /**
- * Selector de fuentes de datos según DATA_SOURCE.
+ * Selector de fuentes de datos.
  *
  *   live (default) -> Raven (pedidos) + Tango/SQL Server (ventas)   [producción]
  *   mock           -> generador local, sin red                       [desarrollo]
  *
- * Cambiar de fuente = cambiar una variable de entorno. El resto de la app
- * (motor de cruce, alertas, UI) no se entera de dónde salen los datos.
+ * DATA_SOURCE fija el default global, pero cada fuente se puede pisar por
+ * separado para prender una sola sin las demás (ej. Tango ventas live mientras
+ * Raven/catálogo siguen en mock hasta tener token / vista):
+ *   PEDIDOS_SOURCE, VENTAS_SOURCE, CATALOGO_SOURCE  (live | mock)
  */
-export function getSources(): { pedidos: PedidosSource; ventas: VentasSource } {
-  const source = process.env.DATA_SOURCE ?? "live";
-
-  if (source === "mock") {
-    const { mockPedidosSource, mockVentasSource } = require("./mock") as typeof import("./mock");
-    return { pedidos: mockPedidosSource, ventas: mockVentasSource };
-  }
-
-  // live
-  const { ravenPedidosSource } = require("./raven") as typeof import("./raven");
-  const { tangoVentasSource } = require("./tango") as typeof import("./tango");
-  return { pedidos: ravenPedidosSource, ventas: tangoVentasSource };
+function resolver(especifica: string): "live" | "mock" {
+  const v = process.env[especifica] ?? process.env.DATA_SOURCE ?? "live";
+  return v === "mock" ? "mock" : "live";
 }
 
-/** Fuente del maestro de artículos (catálogo) según DATA_SOURCE. */
+export function getSources(): { pedidos: PedidosSource; ventas: VentasSource } {
+  const m = require("./mock") as typeof import("./mock");
+  const pedidos =
+    resolver("PEDIDOS_SOURCE") === "mock"
+      ? m.mockPedidosSource
+      : (require("./raven") as typeof import("./raven")).ravenPedidosSource;
+  const ventas =
+    resolver("VENTAS_SOURCE") === "mock"
+      ? m.mockVentasSource
+      : (require("./tango") as typeof import("./tango")).tangoVentasSource;
+  return { pedidos, ventas };
+}
+
+/** Fuente del maestro de artículos (catálogo). */
 export function getCatalogoSource(): CatalogoSource {
-  const source = process.env.DATA_SOURCE ?? "live";
-  if (source === "mock") {
-    const { mockCatalogoSource } = require("./catalogo-mock") as typeof import("./catalogo-mock");
-    return mockCatalogoSource;
+  if (resolver("CATALOGO_SOURCE") === "mock") {
+    return (require("./catalogo-mock") as typeof import("./catalogo-mock")).mockCatalogoSource;
   }
-  const { tangoCatalogoSource } = require("./catalogo-tango") as typeof import("./catalogo-tango");
-  return tangoCatalogoSource;
+  return (require("./catalogo-tango") as typeof import("./catalogo-tango")).tangoCatalogoSource;
 }
 
 export const dataSourceName = () => process.env.DATA_SOURCE ?? "live";

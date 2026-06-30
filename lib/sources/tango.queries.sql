@@ -34,6 +34,7 @@ SELECT
     CAST(d.FECHA_COMERCIAL AS date)  AS fecha,
     s.DESC_SUCURSAL                  AS sucursal_canonico,
     a.COD_ARTICULO                   AS sku,
+    a.DESC_CTA_ARTICULO              AS nombre,
     t.turno                          AS turno,
     SUM(d.CANTIDAD)                  AS unidades
 FROM   dbo.CTA_DETALLE_COMANDA d
@@ -44,7 +45,7 @@ CROSS APPLY (SELECT CASE
         WHEN DATEPART(HOUR, d.FECHA) >= 16 AND DATEPART(HOUR, d.FECHA) < 20 THEN 'tarde'
         ELSE 'noche' END) AS t(turno)
 WHERE  d.ESTADO = 'P'                -- solo ventas válidas (excluye X/D/I)
-GROUP BY CAST(d.FECHA_COMERCIAL AS date), s.DESC_SUCURSAL, a.COD_ARTICULO, t.turno;
+GROUP BY CAST(d.FECHA_COMERCIAL AS date), s.DESC_SUCURSAL, a.COD_ARTICULO, a.DESC_CTA_ARTICULO, t.turno;
 GO
 
 /* Probar:

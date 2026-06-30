@@ -48,7 +48,7 @@ export async function getVentasPorTurno(
     const turno = v.turno ?? "noche";
     let a = map.get(v.sku);
     if (!a) {
-      a = { sku: v.sku, nombre: regla?.skuNombre ?? v.sku, marca, porTurno: {}, total: 0 };
+      a = { sku: v.sku, nombre: regla?.skuNombre ?? v.nombre ?? v.sku, marca, porTurno: {}, total: 0 };
       map.set(v.sku, a);
     }
     a.porTurno[turno] = (a.porTurno[turno] ?? 0) + v.unidades;

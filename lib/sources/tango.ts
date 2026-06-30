@@ -53,6 +53,7 @@ export const tangoVentasSource: VentasSource = {
           CONVERT(varchar(10), fecha, 23) AS fecha,
           sucursal_canonico,
           sku,
+          nombre,
           turno,
           unidades
         FROM dbo.vw_VentasInsumoDiaria
@@ -63,6 +64,7 @@ export const tangoVentasSource: VentasSource = {
     return result.recordset.map((r: any) => ({
       fecha: r.fecha,
       sku: String(r.sku),
+      nombre: r.nombre != null ? String(r.nombre) : undefined,
       sucursalCanonico: String(r.sucursal_canonico),
       unidades: Number(r.unidades) || 0,
       turno: r.turno ? String(r.turno) : undefined,

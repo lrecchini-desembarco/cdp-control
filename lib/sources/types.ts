@@ -15,6 +15,7 @@ export interface PedidoCdp {
 export interface VentaSku {
   fecha: string;            // ISO AAAA-MM-DD
   sku: string;              // Cód. Art. Tango del producto vendido
+  nombre?: string;          // descripción del artículo (DESC_CTA_ARTICULO)
   sucursalCanonico: string; // código canónico de la sucursal
   unidades: number;
   turno?: string;           // mediodia | tarde | noche (slug de lib/turnos)
