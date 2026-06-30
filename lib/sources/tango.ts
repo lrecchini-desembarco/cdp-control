@@ -14,15 +14,19 @@ async function getPool() {
   if (!poolPromise) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const sql = require("mssql");
+    // Instancia nombrada (ej. SRVTANGO\AXSQLEXPRESS): se resuelve por SQL Browser,
+    // sin puerto fijo. Si hay instancia, NO mandamos port.
+    const instanceName = process.env.TANGO_DB_INSTANCE || undefined;
     poolPromise = new sql.ConnectionPool({
       server: process.env.TANGO_DB_HOST!,
-      port: Number(process.env.TANGO_DB_PORT ?? 1433),
+      ...(instanceName ? {} : { port: Number(process.env.TANGO_DB_PORT ?? 1433) }),
       database: process.env.TANGO_DB_NAME!,
       user: process.env.TANGO_DB_USER!,
       password: process.env.TANGO_DB_PASSWORD!,
       options: {
+        instanceName,
         encrypt: process.env.TANGO_DB_ENCRYPT === "true",
-        trustServerCertificate: process.env.TANGO_DB_TRUST_CERT === "true",
+        trustServerCertificate: process.env.TANGO_DB_TRUST_CERT !== "false",
       },
       pool: { max: 5, min: 0, idleTimeoutMillis: 30_000 },
     }).connect();
