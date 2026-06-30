@@ -12,7 +12,18 @@ export interface Local {
   nombre: string;
   googleUrl?: string;
   marca?: MarcaSlug;
+  // Atributos del maestro operativo (doc DS): habilitan filtros y segmentación.
+  estado?: string; // ABIERTO | CERRADO | PRÓXIMAMENTE | EXCLUÍDO
+  tipo?: string; // Propio | Franquicia
+  supervisor?: string;
+  region?: string;
+  provincia?: string;
+  direccion?: string;
+  apertura?: string; // ISO
 }
+
+/** ¿El local está operativo (abierto)? */
+export const estaAbierto = (l: Local) => (l.estado ?? "ABIERTO").toUpperCase() === "ABIERTO";
 
 /** Deduce la marca por el nombre cuando no viene explícita. */
 export function marcaDeNombre(nombre: string): MarcaSlug {
@@ -55,6 +66,7 @@ export async function upsertLocal(nombre: string, googleUrl?: string, marca?: Ma
   const previo = actuales.find((l) => l.nombre.toLowerCase() === n.toLowerCase());
   const otros = actuales.filter((l) => l.nombre.toLowerCase() !== n.toLowerCase());
   const local: Local = {
+    ...previo, // conserva estado/tipo/supervisor/región del maestro al editar
     nombre: n,
     googleUrl: googleUrl !== undefined ? googleUrl.trim() : previo?.googleUrl,
     marca: marca ?? previo?.marca ?? marcaDeNombre(n),
