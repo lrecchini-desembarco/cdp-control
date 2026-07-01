@@ -17,11 +17,13 @@ import {
 // ============================================================================
 const LOGOS = assets.logos as Record<string, string>;
 
+// Acento por marca (con buen contraste para texto blanco en botón/etiqueta).
+// Son defaults temáticos; si tenés el hex exacto del manual de marca, cambialo acá.
 const MARCAS: Record<string, { label: string; color: string; logo: string }> = {
-  desembarco: { label: "El Desembarco", color: "#C1121F", logo: LOGOS.desembarco ?? "" },
-  tasty: { label: "Mr. Tasty", color: "#E4572E", logo: LOGOS.tasty ?? "" },
-  mila: { label: "Mila & Go", color: "#E84A80", logo: LOGOS.milago ?? "" },
-  ds: { label: "DS Group", color: "#155E63", logo: "" }, // sin logo -> texto de marca
+  desembarco: { label: "El Desembarco", color: "#C1121F", logo: LOGOS.desembarco ?? "" }, // rojo
+  tasty: { label: "Mr. Tasty", color: "#E4572E", logo: LOGOS.tasty ?? "" }, // naranja
+  mila: { label: "Mila & Go", color: "#E84A80", logo: LOGOS.milago ?? "" }, // rosa
+  ds: { label: "DS Group", color: "#155E63", logo: "" }, // teal · sin logo -> texto de marca
 };
 
 const LS_KEY = "cdp_comunicados_v1";
@@ -29,7 +31,7 @@ const LS_KEY = "cdp_comunicados_v1";
 function estadoInicial(): Estado {
   return {
     ...estadoBase,
-    color: MARCAS.ds.color,
+    color: MARCAS[estadoBase.marca]?.color ?? "#155E63",
     ...FOOTER_DEFAULT,
   };
 }

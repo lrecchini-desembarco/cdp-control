@@ -46,7 +46,7 @@ export const MAILS_SUGERIDOS = [
 // Defaults JSON-free (marca + contenido). El componente completa `color` (de la
 // marca) y los campos del pie (FOOTER_DEFAULT) al armar el estado inicial.
 export const estadoBase: Omit<Estado, "color" | keyof typeof FOOTER_DEFAULT> = {
-  marca: "ds",
+  marca: "desembarco",
   logoCustom: "",
   logoUrl: "",
   etiquetaLateral: "SISTEMAS",
@@ -75,9 +75,11 @@ export function construirEmailHTML(e: Estado, marca: { logo: string; label: stri
   const link = e.botonLink.trim();
   const href = link ? (/^https?:\/\//.test(link) ? link : "https://" + link) : "";
 
+  // El logo va sobre una banda OSCURA (como la tarjeta de Firmas) → los logos
+  // blancos de firma-assets se ven. El texto fallback también va en blanco.
   const logoCell = logo
     ? `<img src="${esc(logo)}" alt="${esc(marca.label)}" height="34" style="height:34px;display:block;border:0" />`
-    : `<span style="font:700 20px Arial,Helvetica,sans-serif;color:${color}">${esc(marca.label || e.grupo)}</span>`;
+    : `<span style="font:700 20px Arial,Helvetica,sans-serif;color:#ffffff">${esc(marca.label || e.grupo)}</span>`;
 
   const etiqueta = e.etiquetaLateral.trim()
     ? `<span style="display:inline-block;font:700 10px Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;background:${color};border-radius:5px;padding:5px 9px">${esc(
@@ -103,7 +105,7 @@ export function construirEmailHTML(e: Estado, marca: { logo: string; label: stri
   <tr><td align="center" style="text-align:center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e6e3db;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">
       <tr><td style="height:6px;background:${color};font-size:0;line-height:0">&nbsp;</td></tr>
-      <tr><td style="padding:24px 32px 0 32px;text-align:left">
+      <tr><td style="background:#111111;padding:20px 32px;text-align:left">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
           <td style="text-align:left;vertical-align:middle">${logoCell}</td>
           <td style="text-align:right;vertical-align:middle">${etiqueta}</td>

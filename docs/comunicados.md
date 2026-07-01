@@ -19,9 +19,18 @@ y operaciones).
 
 La configuración se guarda en **localStorage** (sobrevive el refresh).
 
+## Colores por marca
+Cada marca tiene un **acento por defecto** (El Desembarco rojo `#C1121F`, Mr. Tasty
+naranja `#E4572E`, Mila & Go rosa `#E84A80`, DS Group teal `#155E63`) que pinta la
+barra superior, el eyebrow y el botón. Son **defaults temáticos editables** en
+`MARCAS` (ComunicadosView) o al vuelo con el color picker — los sitios de las marcas
+no exponen un manual de color, así que si tenés el hex exacto, se cambia ahí.
+
 ## Logos (misma lógica que Firmas)
 Los presets de marca usan los **mismos logos base64** que Firmas
-(`lib/firma-assets.json`). El logo final del email se resuelve por prioridad:
+(`lib/firma-assets.json`). Esos logos son **blancos** (hechos para la tarjeta oscura
+de la firma), por eso el header del email lleva una **banda oscura** (`#111111`,
+igual que Firmas) donde el logo se ve bien. El logo final se resuelve por prioridad:
 
 1. **Logo por URL** (campo del encabezado) — si lo cargás, gana.
 2. **Logo subido** (archivo → base64).
