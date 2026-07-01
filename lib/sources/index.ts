@@ -48,3 +48,4 @@ export function getCatalogoSource(): CatalogoSource {
 export const dataSourceName = () => process.env.DATA_SOURCE ?? "live";
 /** Fuente efectiva por dominio (para el badge "en vivo / ejemplo"). */
 export const preciosSourceName = () => resolver("PRECIOS_SOURCE");
+export const ventasSourceName = () => resolver("VENTAS_SOURCE");

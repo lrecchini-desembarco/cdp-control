@@ -60,3 +60,12 @@ export async function getVentasPorTurno(
   const articulos = Array.from(map.values()).sort((a, b) => b.total - a.total);
   return { articulos, totalPorTurno, total, sucursales };
 }
+
+/** Unidades vendidas totales por sucursal en el rango (para auditar cobertura vs remitos). */
+export async function getVentasPorSucursal(q: RangoQuery = rangoPorDefecto()): Promise<{ sucursal: string; unidades: number }[]> {
+  const { ventas } = getSources();
+  const data = await ventas.getVentas(q);
+  const map = new Map<string, number>();
+  for (const v of data) map.set(v.sucursalCanonico, (map.get(v.sucursalCanonico) ?? 0) + v.unidades);
+  return Array.from(map, ([sucursal, unidades]) => ({ sucursal, unidades })).sort((a, b) => b.unidades - a.unidades);
+}
