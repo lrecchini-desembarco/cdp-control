@@ -1,8 +1,9 @@
 # CDP · Control — DS Group
 
-Dashboard interno para comparar lo que cada sucursal **pide al CDP** (vía el endpoint de Raven)
-contra lo que efectivamente **vende**, traducido a insumo. Next.js (App Router) + TypeScript + Tailwind.
-Sin autenticación: pensado para la etapa de desarrollo.
+Dashboard interno del grupo (El Desembarco · Mr. Tasty · Mila & Go): compara lo que cada
+sucursal **pide al CDP** (Raven) contra lo que **vende** (Tango), y suma ventas por turno,
+precios, reseñas (QR), firmas y comunicados. Next.js (App Router) + TypeScript + Tailwind.
+Acceso por **login + rol** (ver abajo).
 
 ## Correr
 
@@ -36,6 +37,8 @@ el rol se deriva del store (no se puede escalar tocando la cookie).
 - **Usuarios** (`/usuarios`, solo admin) — alta/baja de emails y su rol.
 - **Firmas** (`/firmas`) — generador de firmas de empleados embebido (proyecto aparte en GitHub Pages),
   unificado acá. URL configurable con `NEXT_PUBLIC_FIRMAS_URL`.
+- **Comunicados** (`/comunicados`) — generador de emails HTML (Gmail-safe): elegís marca/logo,
+  editás header/cuerpo/pie y copiás con formato para pegar en Gmail. Ver [`docs/comunicados.md`](docs/comunicados.md).
 - **Resumen** (`/`) — estado del último día: pedido al CDP, venta equivalente, desvío neto y líneas a revisar.
   Arriba, una banda con el estado de las alertas.
 - **Alertas** (`/alertas`) — centro de monitoreo: detecta quiebres, sobre-pedidos, desvíos recurrentes y
@@ -44,6 +47,10 @@ el rol se deriva del store (no se puede escalar tocando la cookie).
 - **Cruce CDP vs ventas** (`/cruce`) — la pantalla central. Filtros por fecha, marca y búsqueda;
   tabla con la **barra de desvío divergente** (izquierda = sub-pedido, derecha = sobre-pedido) y
   semáforo por tolerancia (≤5% / 5–15% / >15%).
+- **Ventas por turno** (`/ventas`) — ventas por artículo y turno (mediodía/tarde/noche) desde Tango,
+  con filtros por marca y sucursal.
+- **Precios** (`/precios`) — precio vigente por producto (neto y con impuestos), general o por sucursal.
+  Sale del precio efectivo de las comandas de Tango. Ver [`docs/precios.md`](docs/precios.md).
 - **Consultar Raven** (`/raven`) — consulta en vivo por código + fecha de entrega. Desglose por sucursal.
 - **Mapeos** (`/mapeos`) — sucursales (Raven → código canónico) y productos (insumo CDP → SKU → factor/BOM).
 - **Control de catálogo** (`/catalogo`) — audita el maestro de Tango (precio $0, cross-brand, sin marca,
@@ -61,16 +68,25 @@ El cruce combina **dos fuentes reales** (ver [`docs/datos.md`](docs/datos.md)):
 - **Ventas por SKU → Tango / SQL Server** (`lib/sources/tango.ts`): lee la vista
   read-only `dbo.vw_VentasInsumoDiaria` (template en `lib/sources/tango.queries.sql`).
 
-El motor `construirCruce()` (`lib/cruce.ts`) las combina en `CruceRow[]`, expuesto por
-`/api/cruce`; las alertas se calculan en `/api/alertas`. La selección de fuente es la
-variable `DATA_SOURCE` (`live` por defecto, `mock` para desarrollo).
+Además, **Precios** (`lib/precios.ts` → `dbo.vw_PreciosProducto`) usa el precio efectivo
+de las comandas de Tango.
 
-**Para quedar 100% productivo falta** (infra del cliente): `RAVEN_TOKEN`, la vista de
-Tango creada + usuario solo-lectura, y las credenciales `TANGO_*`. Detalle en `docs/datos.md`.
+La fuente se elige con `DATA_SOURCE` (default global) y se puede pisar por dominio:
+`VENTAS_SOURCE`, `PRECIOS_SOURCE`, `PEDIDOS_SOURCE`, `CATALOGO_SOURCE` (`live` | `mock`).
+Así se puede prender **Tango ventas/precios** sin depender de Raven.
 
-**Conectar datos reales (paso a paso):** ver **[`docs/conectar-tango.md`](docs/conectar-tango.md)**.
-SQL listo para Sistemas en [`docs/sql/tango-setup.sql`](docs/sql/tango-setup.sql); validá la
-conexión con `npm run test:tango` antes de poner `DATA_SOURCE=live`.
+### Estado real (a hoy)
+- **Ventas por turno** y **Precios**: conectados a **Tango** (base `CENTRAL_ESTADISTICA`,
+  Tango Restô). Verificado con datos reales.
+- **Cruce**: falta `RAVEN_TOKEN` (los pedidos son mock). Raven solo da cantidades, no precios.
+- **Catálogo**: las **listas de precios de Tango están vacías** → en pausa (ver `docs/precios.md`).
+
+**Tango en producción (Vercel):** Vercel no llega al SQL interno → se usa un **bridge HTTP**
++ **Cloudflare Tunnel**. Guía: **[`docs/tango-bridge.md`](docs/tango-bridge.md)**.
+Vistas SQL en `lib/sources/tango.queries.sql` y `lib/sources/precios.queries.sql`; validá con
+`npm run test:tango`.
+
+**Variables de entorno de Vercel (todas):** ver **[`docs/deploy.md`](docs/deploy.md)**.
 
 ## Heurísticas de Nielsen aplicadas
 
