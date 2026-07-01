@@ -30,6 +30,13 @@ una ruta que no tocaste, es el mismo `.next` corrupto. Rebuild 100% limpio:
 rm -rf .next node_modules/.cache && npm run build
 ```
 
+### Prevención automática (hook predev)
+`package.json` tiene un hook **`predev`** (`scripts/matar-dev.ps1`) que **mata los dev
+viejos de los puertos 3000-3010 antes de cada `npm run dev`**. Así nunca se acumulan
+varios dev servers (la causa de `ChunkLoadError` y de que salte al 3001/3002): siempre
+queda **uno solo en 3000**, automático. Para el `.next` corrupto está `npm run dev:limpio`
+(mata + borra `.next` + arranca) y la skill `/dev-limpio`.
+
 ### Reglas para que NO vuelva a pasar
 - **Nunca** dejar un `next build` y después `next dev` sin borrar `.next` en el medio.
 - Tener **un solo** dev server corriendo.

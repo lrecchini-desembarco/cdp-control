@@ -34,10 +34,15 @@ Remove-Item -Recurse -Force .next; npm run dev
 - **404 / 500** en una ruta que sí existe (verificable con `npm run qa`)
 - Notás **más de un dev server** (distintos puertos) respondiendo
 
-## Reglas para que no vuelva a pasar
-- **Un solo `npm run dev`** a la vez.
+## Prevención automática (ya activa)
+Hay un hook **`predev`** en `package.json`: **antes de cada `npm run dev` mata los dev
+viejos** de los puertos 3000-3010 (`scripts/matar-dev.ps1`). Por eso ya no se acumulan
+varios dev ni salta al 3001/3002 — siempre queda **uno solo en 3000**. No hay que
+hacer nada: pasa solo al arrancar `npm run dev`.
+
+## Reglas (por las dudas)
 - Nunca abrir el dashboard mientras corre `npm run build` (build y dev comparten `.next`).
-- Después de `git checkout`/merge con el dev abierto → `npm run dev:limpio`.
+- Después de `git checkout`/merge con el dev abierto → `npm run dev:limpio` (limpia `.next`).
 - **En Vercel (prod) esto NO pasa:** cada deploy es un build limpio e inmutable.
 
 Detalle y contexto en `docs/qa.md`.
