@@ -15,6 +15,10 @@ npm run dev                  # http://localhost:3000
 
 Para iterar sin red (sin Tango/token), poné `DATA_SOURCE=mock` en `.env.local`.
 
+**Después de cada cambio (QA):** `npm run qa` (rutas/nav) · `npx tsc --noEmit` · `npm run build`.
+Si ves **"404 This page could not be found"** en una ruta que existe, es el `.next`
+contaminado (no un bug): `rm -rf .next` + reiniciar el dev. Ver **[`docs/qa.md`](docs/qa.md)**.
+
 **Deploy a Vercel:** ver **[`docs/deploy.md`](docs/deploy.md)** (env vars, Vercel KV para
 persistencia, cron de notificaciones y smoke test).
 
