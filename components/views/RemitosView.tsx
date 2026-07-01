@@ -210,10 +210,10 @@ export default function RemitosView() {
             </div>
             <button
               onClick={exportar}
-              title="Descarga un CSV para Google Sheets (Archivo → Importar) o Excel"
+              title="Exporta la pestaña activa a CSV (Excel / Google Sheets)"
               className="ml-auto shrink-0 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:border-action/40 hover:text-action"
             >
-              ⬇ Exportar (Sheets/Excel)
+              ⬇ Exportar {tab === "cobertura" ? "cobertura" : tab === "sucursal" ? "por sucursal" : "por insumo"}
             </button>
           </Card>
 
