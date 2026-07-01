@@ -21,6 +21,16 @@ export interface VentaSku {
   turno?: string;           // mediodia | tarde | noche (slug de lib/turnos)
 }
 
+/** Precio vigente de un producto en una sucursal (precio efectivo de la última venta). */
+export interface PrecioProducto {
+  sku: string;
+  nombre: string;
+  sucursal: string; // DESC_SUCURSAL
+  precio: number; // PVP con impuestos (unitario)
+  precioNeto: number; // neto sin impuestos (unitario)
+  actualizado?: string; // ISO: fecha de la venta que fijó el precio
+}
+
 /** Rango de consulta común a todas las fuentes. */
 export interface RangoQuery {
   desde: string; // ISO
@@ -40,4 +50,9 @@ export interface VentasSource {
 /** Fuente del maestro de artículos para auditar calidad de datos (hoy: Tango). */
 export interface CatalogoSource {
   getCatalogo(): Promise<import("../types").ArticuloCatalogo[]>;
+}
+
+/** Fuente de precios de productos (hoy: Tango, precio efectivo de las comandas). */
+export interface PreciosSource {
+  getPrecios(): Promise<PrecioProducto[]>;
 }

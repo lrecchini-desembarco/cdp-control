@@ -1,4 +1,4 @@
-import type { CatalogoSource, PedidosSource, VentasSource } from "./types";
+import type { CatalogoSource, PedidosSource, VentasSource, PreciosSource } from "./types";
 
 /**
  * Selector de fuentes de datos.
@@ -27,6 +27,14 @@ export function getSources(): { pedidos: PedidosSource; ventas: VentasSource } {
       ? m.mockVentasSource
       : (require("./tango") as typeof import("./tango")).tangoVentasSource;
   return { pedidos, ventas };
+}
+
+/** Fuente de precios de productos (Tango, o mock). Pisable con PRECIOS_SOURCE. */
+export function getPreciosSource(): PreciosSource {
+  if (resolver("PRECIOS_SOURCE") === "mock") {
+    return (require("./mock") as typeof import("./mock")).mockPreciosSource;
+  }
+  return (require("./tango") as typeof import("./tango")).tangoPreciosSource;
 }
 
 /** Fuente del maestro de artículos (catálogo). */

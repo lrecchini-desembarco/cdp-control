@@ -63,6 +63,14 @@ const VENTAS_QUERY = `
   ORDER BY fecha, sucursal_canonico, sku;
 `;
 
+const PRECIOS_QUERY = `
+  SELECT sku, nombre, sucursal,
+         CONVERT(varchar(10), actualizado, 23) AS actualizado,
+         precio, precio_neto
+  FROM dbo.vw_PreciosProducto
+  ORDER BY nombre, sucursal;
+`;
+
 let poolPromise = null;
 const getPool = () => (poolPromise ??= new sql.ConnectionPool(config).connect());
 
@@ -93,11 +101,22 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (url.pathname === "/precios") {
+    try {
+      const pool = await getPool();
+      const r = await pool.request().query(PRECIOS_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      console.error("precios error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
   return json(404, { error: "ruta no encontrada" });
 });
 
 server.listen(PORT, () => {
   console.log(`✓ Tango bridge escuchando en http://localhost:${PORT}`);
-  console.log(`  GET /ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (header x-bridge-secret)`);
+  console.log(`  GET /ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  ·  GET /precios   (header x-bridge-secret)`);
   console.log(`  Publicalo con:  cloudflared tunnel --url http://localhost:${PORT}`);
 });

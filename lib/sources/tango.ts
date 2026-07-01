@@ -1,4 +1,4 @@
-import type { VentaSku, VentasSource, RangoQuery } from "./types";
+import type { VentaSku, VentasSource, RangoQuery, PrecioProducto, PreciosSource } from "./types";
 
 // Fuente REAL de ventas: Tango sobre SQL Server (mismo patrón que el dashboard
 // de facturación del grupo). La app NO consulta tablas de Tango directo: lee una
@@ -97,4 +97,52 @@ export const VENTAS_QUERY = `
   FROM dbo.vw_VentasInsumoDiaria
   WHERE fecha BETWEEN @desde AND @hasta
   ORDER BY fecha, sucursal_canonico, sku;
+`;
+
+// ---------------------------------------------------------------------------
+// Precios de productos (precio efectivo de la última venta, por SKU x sucursal).
+// Lee la vista read-only dbo.vw_PreciosProducto (ver lib/sources/precios.queries.sql).
+// ---------------------------------------------------------------------------
+function filaAPrecio(r: any): PrecioProducto {
+  return {
+    sku: String(r.sku),
+    nombre: r.nombre != null ? String(r.nombre) : String(r.sku),
+    sucursal: String(r.sucursal),
+    precio: Number(r.precio) || 0,
+    precioNeto: Number(r.precio_neto) || 0,
+    actualizado: r.actualizado != null ? String(r.actualizado) : undefined,
+  };
+}
+
+async function preciosViaBridge(): Promise<PrecioProducto[]> {
+  const base = process.env.TANGO_BRIDGE_URL!.replace(/\/$/, "");
+  const res = await fetch(`${base}/precios`, {
+    headers: { "x-bridge-secret": process.env.TANGO_BRIDGE_SECRET ?? "" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Bridge Tango respondió ${res.status} ${res.statusText}`);
+  const rows = (await res.json()) as any[];
+  return rows.map(filaAPrecio);
+}
+
+export const tangoPreciosSource: PreciosSource = {
+  async getPrecios(): Promise<PrecioProducto[]> {
+    if (process.env.TANGO_BRIDGE_URL) return preciosViaBridge();
+    if (!process.env.TANGO_DB_HOST) {
+      throw new Error(
+        "Tango no está configurado (falta TANGO_DB_HOST o TANGO_BRIDGE_URL). Configurá TANGO_* / el bridge, o usá DATA_SOURCE=mock."
+      );
+    }
+    const pool = await getPool();
+    const result = await pool.request().query(PRECIOS_QUERY);
+    return result.recordset.map(filaAPrecio);
+  },
+};
+
+export const PRECIOS_QUERY = `
+  SELECT sku, nombre, sucursal,
+         CONVERT(varchar(10), actualizado, 23) AS actualizado,
+         precio, precio_neto
+  FROM dbo.vw_PreciosProducto
+  ORDER BY nombre, sucursal;
 `;

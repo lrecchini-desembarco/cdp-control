@@ -1,7 +1,15 @@
 import { recentDates, brandDeInsumo } from "../catalogo";
 import { getMapeos } from "../mapeos-store";
 import { TURNOS } from "../turnos";
-import type { PedidoCdp, VentaSku, PedidosSource, VentasSource, RangoQuery } from "./types";
+import type {
+  PedidoCdp,
+  VentaSku,
+  PedidosSource,
+  VentasSource,
+  RangoQuery,
+  PrecioProducto,
+  PreciosSource,
+} from "./types";
 
 // Peso de cada turno (la noche concentra más venta en gastronomía).
 const PESO_TURNO: Record<string, number> = { mediodia: 0.4, tarde: 0.15, noche: 0.45 };
@@ -41,6 +49,31 @@ export const mockVentasSource: VentasSource = {
             out.push({ fecha, sku: m.skuVenta, sucursalCanonico: s.canonico, unidades, turno: t.slug });
           }
         }
+      }
+    }
+    return out;
+  },
+};
+
+export const mockPreciosSource: PreciosSource = {
+  async getPrecios(): Promise<PrecioProducto[]> {
+    const { sucursales, productoMap } = await getMapeos();
+    const mapeadas = sucursales.filter((s) => s.activa && s.canonico);
+    const hoy = recentDates(1)[0];
+    const r = rng(31);
+    const out: PrecioProducto[] = [];
+    for (const m of productoMap) {
+      const base = 1500 + Math.floor(r() * 8000); // PVP base con impuestos
+      for (const s of mapeadas.filter((su) => su.brand === brandDeInsumo(m.codigoCdp))) {
+        const precio = Math.round((base * (0.95 + r() * 0.15)) / 10) * 10; // varía por sucursal
+        out.push({
+          sku: m.skuVenta,
+          nombre: m.skuNombre ?? m.skuVenta,
+          sucursal: s.nombre,
+          precio,
+          precioNeto: Math.round(precio / 1.21),
+          actualizado: hoy,
+        });
       }
     }
     return out;
