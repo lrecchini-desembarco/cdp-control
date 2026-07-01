@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSesion } from "@/lib/session";
 import { getPrecios } from "@/lib/precios";
-import { dataSourceName } from "@/lib/sources";
+import { preciosSourceName } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
   const sucursal = req.nextUrl.searchParams.get("sucursal") ?? undefined;
   try {
     const data = await getPrecios(sucursal);
-    return NextResponse.json({ ok: true, source: dataSourceName(), ...data });
+    return NextResponse.json({ ok: true, source: preciosSourceName(), ...data });
   } catch (e) {
     return NextResponse.json(
-      { ok: false, source: dataSourceName(), error: e instanceof Error ? e.message : "No se pudieron leer los precios." },
+      { ok: false, source: preciosSourceName(), error: e instanceof Error ? e.message : "No se pudieron leer los precios." },
       { status: 502 }
     );
   }
