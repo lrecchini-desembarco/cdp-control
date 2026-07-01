@@ -22,18 +22,31 @@ interface Fila {
   actualizado?: string;
 }
 
+interface Comparacion {
+  marca: string;
+  nombre: string;
+  precioWeb: number;
+  precioTango: number | null;
+  tangoNombre: string | null;
+  diffPct: number | null;
+  estado: "ok" | "dif" | "alerta" | "nomatch";
+}
+
 const money = (n: number) => "$" + Math.round(n || 0).toLocaleString("es-AR");
 
 export default function PreciosView() {
   const [general, setGeneral] = useState<General[]>([]);
   const [sucursales, setSucursales] = useState<string[]>([]);
   const [source, setSource] = useState("");
-  const [modo, setModo] = useState<"general" | "sucursal">("general");
+  const [modo, setModo] = useState<"general" | "sucursal" | "web">("general");
   const [suc, setSuc] = useState("");
   const [filas, setFilas] = useState<Fila[]>([]);
   const [q, setQ] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [comp, setComp] = useState<Comparacion[] | null>(null);
+  const [compResumen, setCompResumen] = useState<any>(null);
+  const [compCargando, setCompCargando] = useState(false);
 
   useEffect(() => {
     fetch("/api/precios")
@@ -60,8 +73,28 @@ export default function PreciosView() {
       .finally(() => setCargando(false));
   }
 
+  function verComparacion() {
+    setModo("web");
+    if (comp || compCargando) return; // lazy: una sola vez
+    setCompCargando(true);
+    fetch("/api/precios/comparar")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok) {
+          setComp(j.filas || []);
+          setCompResumen(j.resumen);
+        } else setError(j.error || "No se pudo comparar con la web.");
+      })
+      .catch((e) => setError(String(e)))
+      .finally(() => setCompCargando(false));
+  }
+
   const t = q.trim().toLowerCase();
   const coincide = (n: string, s: string) => !t || n.toLowerCase().includes(t) || s.toLowerCase().includes(t);
+  const compFil = useMemo(
+    () => (comp ?? []).filter((c) => coincide(c.nombre, c.tangoNombre ?? "")),
+    [comp, t]
+  );
   const gen = useMemo(() => general.filter((p) => coincide(p.nombre, p.sku)), [general, t]);
   const fil = useMemo(() => filas.filter((p) => coincide(p.nombre, p.sku)), [filas, t]);
 
@@ -95,7 +128,13 @@ export default function PreciosView() {
         <div className="flex gap-1 rounded-lg border border-line p-0.5">
           <Tab activo={modo === "general"} onClick={() => setModo("general")}>General</Tab>
           <Tab activo={modo === "sucursal"} onClick={() => setModo("sucursal")}>Por sucursal</Tab>
+          <Tab activo={modo === "web"} onClick={verComparacion}>Web vs Tango</Tab>
         </div>
+        {modo === "web" && compResumen && (
+          <span className="text-2xs text-faint">
+            {compResumen.matcheados}/{compResumen.web} match · {compResumen.ok} ≈ok · {compResumen.alerta} ‼
+          </span>
+        )}
         {modo === "sucursal" && (
           <select
             className={`${inputClass} max-w-56`}
@@ -122,7 +161,7 @@ export default function PreciosView() {
 
       {/* Tabla */}
       <Card className="overflow-hidden">
-        {modo === "general" ? (
+        {modo === "general" && (
           <Tabla
             cols={["Producto", "Precio (c/imp.)", "Neto", "Rango entre sucursales", "Sucursales"]}
             vacio={cargando ? "Cargando…" : "Sin productos."}
@@ -136,7 +175,8 @@ export default function PreciosView() {
               <span key="s" className="text-2xs text-faint">{p.sucursales}</span>,
             ])}
           />
-        ) : (
+        )}
+        {modo === "sucursal" && (
           <Tabla
             cols={["Producto", "Precio (c/imp.)", "Neto", "Actualizado"]}
             vacio={!suc ? "Elegí una sucursal arriba." : cargando ? "Cargando…" : "Sin productos en esta sucursal."}
@@ -148,8 +188,42 @@ export default function PreciosView() {
             ])}
           />
         )}
+        {modo === "web" && (
+          <Tabla
+            cols={["Producto (web)", "Web (lista)", "Tango (efectivo)", "Dif", "Match Tango"]}
+            vacio={compCargando ? "Comparando con la web…" : "Sin datos."}
+            filas={compFil
+              .filter((c) => c.precioTango != null)
+              .sort((a, b) => Math.abs(b.diffPct ?? 0) - Math.abs(a.diffPct ?? 0))
+              .map((c) => [
+                <span key="p" className="text-sm text-ink">{c.nombre}</span>,
+                <b key="w" className="font-mono tnum text-ink">{money(c.precioWeb)}</b>,
+                <span key="t" className="font-mono tnum text-muted">{money(c.precioTango!)}</span>,
+                <Dif key="d" pct={c.diffPct} estado={c.estado} />,
+                <span key="m" className="text-2xs text-faint">{c.tangoNombre}</span>,
+              ])}
+          />
+        )}
       </Card>
+      {modo === "web" && (
+        <p className="text-2xs text-faint">
+          Web = precio de <b>lista</b> (WooCommerce) · Tango = precio <b>efectivo</b> cobrado (incluye promos/combos).
+          Los ‼ suelen ser productos que en Tango solo existen como combo/promo. Un patrón “Tango arriba” = carta web desactualizada.
+        </p>
+      )}
     </div>
+  );
+}
+
+function Dif({ pct, estado }: { pct: number | null; estado: string }) {
+  if (pct == null) return <span className="text-2xs text-faint">—</span>;
+  const tono = estado === "ok" ? "text-ok" : estado === "dif" ? "text-warn" : "text-bad";
+  const icono = estado === "ok" ? "" : estado === "alerta" ? " ‼" : "";
+  return (
+    <span className={`font-mono text-sm font-semibold tnum ${tono}`}>
+      {pct > 0 ? "+" : ""}
+      {pct}%{icono}
+    </span>
   );
 }
 
