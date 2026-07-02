@@ -85,6 +85,17 @@ const COBROS_QUERY = `
   ORDER BY fecha, id_sucursal, medio_pago;
 `;
 
+// Maestro de sucursales tal como las nombra Tango (DESC_SUCURSAL). Sirve para que
+// otras apps reconcilien su propio namespace (ej. store_id de Mercado Pago) por nombre.
+// Nota: la vista NO expone ID_SUCURSAL (solo el nombre); el ID firme sale de vw_CobrosDiarios.
+const SUCURSALES_QUERY = `
+  SELECT sucursal_canonico AS sucursal,
+         CONVERT(varchar(10), MAX(fecha), 23) AS ultima_venta
+  FROM dbo.vw_VentasInsumoDiaria
+  GROUP BY sucursal_canonico
+  ORDER BY sucursal_canonico;
+`;
+
 let poolPromise = null;
 const getPool = () => (poolPromise ??= new sql.ConnectionPool(config).connect());
 
@@ -98,6 +109,20 @@ const server = createServer(async (req, res) => {
   };
 
   if (url.pathname === "/health") return json(200, { ok: true });
+
+  // Índice: lista los endpoints (sin datos, sin secreto) para que un consumidor los descubra.
+  if (url.pathname === "/") return json(200, {
+    ok: true,
+    bridge: "tango-cdp",
+    endpoints: [
+      "GET /health",
+      "GET /ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD",
+      "GET /precios",
+      "GET /sucursales",
+      "GET /cobros?desde=AAAA-MM-DD&hasta=AAAA-MM-DD  (requiere vista vw_CobrosDiarios)",
+    ],
+    auth: "header x-bridge-secret (salvo /health y /)",
+  });
 
   if (req.headers["x-bridge-secret"] !== SECRET) return json(401, { error: "no autorizado" });
 
@@ -122,6 +147,17 @@ const server = createServer(async (req, res) => {
       return json(200, r.recordset);
     } catch (e) {
       console.error("precios error:", e.message);
+      return json(502, { error: e.message });
+    }
+  }
+
+  if (url.pathname === "/sucursales") {
+    try {
+      const pool = await getPool();
+      const r = await pool.request().query(SUCURSALES_QUERY);
+      return json(200, r.recordset);
+    } catch (e) {
+      console.error("sucursales error:", e.message);
       return json(502, { error: e.message });
     }
   }

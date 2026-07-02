@@ -119,9 +119,10 @@ GRANT SELECT ON dbo.vw_CobrosDiarios TO cdp_lectura;
 > hora + N° comprobante) para contraste operación-por-operación; si no, el total diario por medio.
 
 ## Notas
-- El bridge expone `GET /ventas?desde&hasta`, `GET /precios` y `GET /cobros?desde&hasta`
-  (consultas parametrizadas a vistas, sin SQL arbitrario) y exige el header `x-bridge-secret`.
-  No expone el SQL. **Es un solo proceso**: los tres endpoints salen del mismo bridge/túnel.
+- Endpoints: `GET /` (índice, sin secreto) · `GET /health` · `GET /ventas?desde&hasta` ·
+  `GET /precios` · `GET /sucursales` (maestro por nombre, DESC_SUCURSAL) · `GET /cobros?desde&hasta`.
+  Todos (salvo `/` y `/health`) exigen el header `x-bridge-secret`. Consultas parametrizadas a
+  vistas, sin SQL arbitrario. **Es un solo proceso**: todos los endpoints salen del mismo bridge/túnel.
 - El endpoint `/cobros` recién agregado se sirve tras **reiniciar el bridge** (reboot o manual);
   como igual da 502 hasta que exista `vw_CobrosDiarios`, no urge reiniciar.
 - En la red interna, el dev local usa **SQL directo** (sin bridge): no setees
