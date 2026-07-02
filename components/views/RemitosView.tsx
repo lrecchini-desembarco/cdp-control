@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card, inputClass } from "@/components/ui/primitives";
 import { descargarCSV } from "@/lib/exportar-csv";
+import { parseNumero } from "@/lib/num";
 
 // Formato esperado del CSV (lo genera scripts/parsear-remitos.py):
 // fecha,marca,sucursal,codigo,descripcion,cantidad,remito
@@ -80,7 +81,7 @@ export default function RemitosView() {
       sucursal: r[iS] ?? "",
       codigo: r[iC] ?? "",
       descripcion: r[iD] ?? "",
-      cantidad: Number((r[iQ] ?? "0").replace(",", ".")) || 0,
+      cantidad: parseNumero(r[iQ]),
       remito: r[iR] ?? "",
     }));
     setRemitos(parsed);

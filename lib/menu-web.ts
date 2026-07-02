@@ -28,7 +28,19 @@ export const MENUS_WEB: { marca: string; url: string }[] = [
 const decode = (t: string) =>
   t.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#8217;/g, "'").replace(/&nbsp;/g, " ").trim();
 const esPrecio = (t: string) => /^\$\s?[\d][\d.,]*$/.test(t.replace(/\s/g, ""));
-const num = (t: string) => Number(String(t).replace(/[^\d]/g, "")) || 0;
+// Parser tolerante es-AR/inglés (mismas reglas que lib/num.ts; inline para mantener
+// este módulo autocontenido —lo usa un script node sin el alias @/).
+const num = (t: string): number => {
+  let s = String(t ?? "").replace(/[^0-9.,-]/g, "").trim();
+  if (!s) return 0;
+  const neg = s.startsWith("-"); s = s.replace(/-/g, "");
+  const c = s.lastIndexOf(","), d = s.lastIndexOf(".");
+  if (c >= 0 && d >= 0) s = c > d ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  else if (c >= 0) s = (s.match(/,/g) || []).length > 1 ? s.replace(/,/g, "") : s.replace(",", ".");
+  else if (d >= 0) { const p = s.split("."); if (p.length > 2 || p[p.length - 1].length === 3) s = s.replace(/\./g, ""); }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? (neg ? -n : n) : 0;
+};
 export const norm = (t: string) =>
   (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const PROMO = /\b(COMBO|DAY|NOCHE|2X1|2X|3X|PROMO|X2|X3|BALDE|MENU|MEGA|HH|LIBRE|BOX|ADICIONAL|EXTRA)\b/;
