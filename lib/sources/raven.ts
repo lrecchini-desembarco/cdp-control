@@ -11,7 +11,7 @@ const TOKEN = process.env.RAVEN_TOKEN;
 
 interface RavenResp {
   code: string;
-  branches?: { branch_code: string; qty: number }[];
+  branches?: { branch_code: string; branch_name?: string; qty: number }[];
 }
 
 function rangoFechas(desde: string, hasta: string): string[] {
@@ -53,11 +53,14 @@ export const ravenPedidosSource: PedidosSource = {
               if (!resp?.branches) return;
               for (const b of resp.branches) {
                 const suc = sucPorRaven.get(b.branch_code);
-                if (!suc || !suc.canonico) continue; // sin mapear -> punto ciego (no entra)
+                // Identidad de sucursal = NOMBRE (lo tienen Raven y Tango): el cruce
+                // reconcilia por nombre normalizado. Se incluyen TODAS las sucursales
+                // (antes se descartaban las sin canónico -> puntos ciegos).
+                const sucursal = suc?.nombre || b.branch_name || b.branch_code;
                 pedidos.push({
                   fecha,
                   codigoCdp: p.code,
-                  sucursalCanonico: suc.canonico,
+                  sucursalCanonico: sucursal,
                   unidades: Number(b.qty) || 0,
                 });
               }

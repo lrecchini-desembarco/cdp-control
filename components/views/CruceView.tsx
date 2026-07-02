@@ -52,6 +52,7 @@ export default function CruceView() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("desvio");
   const [detalle, setDetalle] = useState<RowDev | null>(null);
+  const [pedidosMock, setPedidosMock] = useState(false);
 
   // Inicialización (una vez): toma el rango y filtros de la URL si vienen por
   // deep-link, o usa los últimos 7 días por defecto.
@@ -84,6 +85,7 @@ export default function CruceView() {
       const j = await r.json();
       if (!j.ok) throw new Error(j.error ?? "No se pudo construir el cruce.");
       setAll(j.data as CruceRow[]);
+      setPedidosMock(j.pedidosSource === "mock");
       setStatus("ok");
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : "Error desconocido.");
@@ -200,6 +202,17 @@ export default function CruceView() {
           desglose y saltar a Raven o a la receta.
         </p>
       </Card>
+
+      {/* Aviso: pedidos simulados (Raven no está en vivo) → los desvíos no son reales */}
+      {pedidosMock && status === "ok" && (
+        <Card className="border-l-4 border-l-warn/60 bg-warn/5 p-3">
+          <p className="text-xs text-ink">
+            <b className="text-warn">Modo demo:</b> los pedidos son <b>simulados</b> — las ventas sí son reales de Tango,
+            pero para pedidos reales de Raven falta activar <code className="rounded bg-paper px-1">PEDIDOS_SOURCE=live</code> en
+            el entorno. Mientras tanto, <b>los desvíos no representan la operación real</b>.
+          </p>
+        </Card>
+      )}
 
       {/* Filtros — reconocer mejor que recordar (Nielsen #6) */}
       <Card className="p-4">

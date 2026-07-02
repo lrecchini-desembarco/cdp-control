@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCruce, rangoPorDefecto } from "@/lib/cruce";
-import { dataSourceName } from "@/lib/sources";
+import { dataSourceName, pedidosSourceName, ventasSourceName } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,15 @@ export async function GET(req: NextRequest) {
   const hasta = req.nextUrl.searchParams.get("hasta") ?? def.hasta;
   try {
     const data = await getCruce({ desde, hasta });
-    return NextResponse.json({ ok: true, source: dataSourceName(), desde, hasta, data });
+    return NextResponse.json({
+      ok: true,
+      source: dataSourceName(),
+      pedidosSource: pedidosSourceName(),
+      ventasSource: ventasSourceName(),
+      desde,
+      hasta,
+      data,
+    });
   } catch (e) {
     console.error("[cruce] error:", e);
     return NextResponse.json(

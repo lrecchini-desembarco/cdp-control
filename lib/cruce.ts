@@ -11,16 +11,25 @@ import type { CruceComponente, CruceRow } from "./types";
  * cada SKU vendido x su factor (el desglose que después explica el detalle).
  * Usa los mapeos efectivos (defaults + lo guardado en la pantalla Mapeos).
  */
-export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos: MapeosData): CruceRow[] {
-  const sucPorCanonico = new Map(mapeos.sucursales.map((s) => [s.canonico, s]));
-  const reglasPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
+// Normaliza el nombre de sucursal para reconciliar Raven ↔ Tango: saca acentos,
+// el prefijo "mrt ", símbolos y espacios. Ambas fuentes traen el NOMBRE (no un ID),
+// así que la clave del cruce se arma sobre el nombre normalizado.
+const normSuc = (s: string) =>
+  (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/^mrt\s+/, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
-  // 1) Acumular componentes de venta por (fecha, sucursal, insumo)
+export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos: MapeosData): CruceRow[] {
+  const reglasPorSku = new Map(mapeos.productoMap.map((m) => [m.skuVenta, m]));
+  // Nombre "lindo" por sucursal normalizada (para mostrar). Gana el de ventas (Tango).
+  const nombrePorSuc = new Map<string, string>();
+
+  // 1) Acumular componentes de venta por (fecha, sucursalNorm, insumo)
   const comps = new Map<string, Map<string, CruceComponente>>();
   for (const v of ventas) {
     const regla = reglasPorSku.get(v.sku);
     if (!regla) continue; // SKU sin receta -> no aporta (se reporta como punto ciego)
-    const key = `${v.fecha}::${v.sucursalCanonico}::${regla.codigoCdp}`;
+    const suc = normSuc(v.sucursalCanonico);
+    if (!nombrePorSuc.has(suc)) nombrePorSuc.set(suc, v.sucursalCanonico);
+    const key = `${v.fecha}::${suc}::${regla.codigoCdp}`;
     const porSku = comps.get(key) ?? new Map<string, CruceComponente>();
     const prev = porSku.get(v.sku);
     const vendidas = (prev?.vendidas ?? 0) + v.unidades;
@@ -34,10 +43,12 @@ export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos:
     comps.set(key, porSku);
   }
 
-  // 2) Acumular pedidos por (fecha, sucursal, insumo)
+  // 2) Acumular pedidos por (fecha, sucursalNorm, insumo)
   const ped = new Map<string, number>();
   for (const p of pedidos) {
-    const key = `${p.fecha}::${p.sucursalCanonico}::${p.codigoCdp}`;
+    const suc = normSuc(p.sucursalCanonico);
+    if (!nombrePorSuc.has(suc)) nombrePorSuc.set(suc, p.sucursalCanonico);
+    const key = `${p.fecha}::${suc}::${p.codigoCdp}`;
     ped.set(key, (ped.get(key) ?? 0) + p.unidades);
   }
 
@@ -45,14 +56,13 @@ export function construirCruce(pedidos: PedidoCdp[], ventas: VentaSku[], mapeos:
   const claves = new Set<string>([...Array.from(ped.keys()), ...Array.from(comps.keys())]);
   const rows: CruceRow[] = [];
   Array.from(claves).forEach((key) => {
-    const [fecha, canonico, codigoCdp] = key.split("::");
-    const suc = sucPorCanonico.get(canonico);
+    const [fecha, sucNorm, codigoCdp] = key.split("::");
     const componentes = Array.from((comps.get(key) ?? new Map()).values());
     const ventaEquiv = componentes.reduce((a, c) => a + c.subtotal, 0);
     rows.push({
       fecha,
-      brand: suc?.brand ?? brandDeInsumo(codigoCdp),
-      sucursal: suc?.nombre ?? canonico,
+      brand: brandDeInsumo(codigoCdp),
+      sucursal: nombrePorSuc.get(sucNorm) ?? sucNorm,
       codigoCdp,
       producto: nombreInsumo(codigoCdp),
       pedidoCdp: ped.get(key) ?? 0,
