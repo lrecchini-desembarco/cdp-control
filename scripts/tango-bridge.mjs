@@ -76,13 +76,19 @@ const PRECIOS_QUERY = `
 // Hasta que exista, este endpoint responde 502 (por eso queda "listo/plug-and-play").
 // La vista debe exponer: fecha DATE, id_sucursal, sucursal (DESC_SUCURSAL),
 // medio_pago, importe. (Ideal: una fila por cobro con hora + comprobante.)
+// Nombres de columna alineados al contrato final de la vista (Pablo/cierres):
+// FECHA, ID_SUCURSAL, DESC_SUCURSAL, MEDIO_PAGO, IMPORTE. Se re-aliasan a claves
+// JSON estables (fecha, id_sucursal, sucursal, medio_pago, importe) para el consumidor.
 const COBROS_QUERY = `
   SELECT
-    CONVERT(varchar(10), fecha, 23) AS fecha,
-    id_sucursal, sucursal, medio_pago, importe
+    CONVERT(varchar(10), FECHA, 23) AS fecha,
+    ID_SUCURSAL   AS id_sucursal,
+    DESC_SUCURSAL AS sucursal,
+    MEDIO_PAGO    AS medio_pago,
+    IMPORTE       AS importe
   FROM dbo.vw_CobrosDiarios
-  WHERE fecha BETWEEN @desde AND @hasta
-  ORDER BY fecha, id_sucursal, medio_pago;
+  WHERE FECHA BETWEEN @desde AND @hasta
+  ORDER BY FECHA, ID_SUCURSAL, MEDIO_PAGO;
 `;
 
 // Maestro de sucursales tal como las nombra Tango (DESC_SUCURSAL). Sirve para que

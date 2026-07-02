@@ -102,21 +102,22 @@ Contrato que debe exponer la vista (para el consumidor de la app de cierres):
 ```sql
 CREATE VIEW dbo.vw_CobrosDiarios AS
 SELECT
-  <fecha_comercial>  AS fecha,          -- DATE
-  <id_sucursal>      AS id_sucursal,    -- ID de Tango (clave firme, mapear por ID)
-  <desc_sucursal>    AS sucursal,       -- DESC_SUCURSAL (nombre, para etiqueta/fallback)
-  <medio_pago_desc>  AS medio_pago,     -- Efectivo, Visa, Mastercard, Mercado Pago/QR, PedidosYa…
-  SUM(<importe>)     AS importe
-FROM   <tablas CTA_* de cobros>
+  <fecha_comercial>  AS FECHA,          -- DATE
+  <id_sucursal>      AS ID_SUCURSAL,    -- ID de Tango (clave firme, mapear por ID)
+  <desc_sucursal>    AS DESC_SUCURSAL,  -- nombre de sucursal (etiqueta / fallback)
+  <medio_pago_desc>  AS MEDIO_PAGO,     -- Efectivo, Visa, Mastercard, Mercado Pago/QR, PedidosYa…
+  SUM(<importe>)     AS IMPORTE
+FROM   <tablas CTA_* de cobros> JOIN SUCURSAL ...
 WHERE  <estado válido>                   -- equivalente al ESTADO='P' de ventas (excluir anulados)
 GROUP  BY <fecha_comercial>, <id_sucursal>, <desc_sucursal>, <medio_pago_desc>;
 
 GRANT SELECT ON dbo.vw_CobrosDiarios TO cdp_lectura;
 ```
 
-> **Incluir `id_sucursal` Y `sucursal`**: la app cruza MP por ID (Tango usa otro namespace
-> de IDs que Raven/CDP), y el nombre sirve de etiqueta. Ideal: **una fila por cobro** (con
-> hora + N° comprobante) para contraste operación-por-operación; si no, el total diario por medio.
+> El endpoint `/cobros` del bridge lee **exactamente** esas columnas (`FECHA`, `ID_SUCURSAL`,
+> `DESC_SUCURSAL`, `MEDIO_PAGO`, `IMPORTE`). Incluir `ID_SUCURSAL` Y `DESC_SUCURSAL`: la app cruza
+> MP por ID (Tango usa otro namespace de IDs que Raven/CDP), el nombre es etiqueta. Ideal: **una
+> fila por cobro** (con hora + N° comprobante) para contraste operación-por-operación; si no, total diario.
 
 ## Notas
 - Endpoints: `GET /` (índice, sin secreto) · `GET /health` · `GET /ventas?desde&hasta` ·
